@@ -1,0 +1,9 @@
+/build*/
+/out/
+.vs/
+.vscode/
+*.user
+__pycache__/
+*.pyc
+/tools/.venv/
+/backups/
