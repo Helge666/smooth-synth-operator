@@ -3,6 +3,7 @@
 #include "model/sso_DeviceDefinition.cpp"
 #include "midi/sso_MidiConnection.cpp"
 #include "midi/sso_ParameterSender.cpp"
+#include "state/sso_SynthOwnership.cpp"
 #include "state/sso_SynthController.cpp"
 #include "midi/sso_TestNotePlayer.cpp"
 #include "library/sso_Preset.cpp"
@@ -16,4 +17,5 @@
 #include "gui/sso_SynthMemoryPanel.cpp"
 #include "gui/sso_PresetBrowser.cpp"
 #include "gui/sso_GeneratorPanel.cpp"
+#include "gui/sso_InactiveOverlay.cpp"
 #include "gui/sso_GenericParamPanel.cpp"

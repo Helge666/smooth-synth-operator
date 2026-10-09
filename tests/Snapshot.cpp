@@ -21,7 +21,16 @@ int runSnapshot (const juce::StringArray& args)
     settings->get().setValue ("kiwi3p.browserVisible", ! args.contains ("--no-browser"));
 
     Kiwi3PProcessor processor;
-    std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+
+    // --inactive: a second instance for the same synth shows the inactive overlay
+    std::unique_ptr<Kiwi3PProcessor> second;
+    if (args.contains ("--inactive"))
+    {
+        second = std::make_unique<Kiwi3PProcessor>();
+        processor.controller.setInstanceDescription ("Cubase - track \"JX Pad\"");
+    }
+
+    std::unique_ptr<juce::AudioProcessorEditor> editor ((second != nullptr ? *second : processor).createEditor());
 
     auto designWidth = Kiwi3PEditor::consoleWidth + (args.contains ("--no-browser") ? 0 : Kiwi3PEditor::browserWidth);
     editor->setSize (designWidth, Kiwi3PEditor::designHeight);

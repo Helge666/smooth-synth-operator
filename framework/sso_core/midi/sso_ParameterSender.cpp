@@ -53,8 +53,16 @@ void ParameterSender::clearDirty() noexcept
         dirty[(size_t) i] = false;
 }
 
+void ParameterSender::setMuted (bool shouldMute) noexcept
+{
+    muted = shouldMute;
+}
+
 void ParameterSender::enqueue (const juce::MidiMessage& m)
 {
+    if (muted.load())
+        return;
+
     const juce::ScopedLock sl (queueLock);
     queue.push_back (m);
 }
@@ -78,6 +86,17 @@ bool ParameterSender::trySend (const juce::MidiMessage& m)
 
 void ParameterSender::hiResTimerCallback()
 {
+    if (muted.load())
+    {
+        {
+            const juce::ScopedLock sl (queueLock);
+            queue.clear();
+        }
+
+        clearDirty();
+        return;
+    }
+
     for (;;)
     {
         juce::MidiMessage next;

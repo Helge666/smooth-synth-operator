@@ -28,6 +28,7 @@ private:
         sso::PresetBrowser browser;
         sso::HeaderBar header;
         Kiwi3PPanel panel;
+        sso::InactiveOverlay inactiveOverlay;
         bool browserVisible = true;
     };
 

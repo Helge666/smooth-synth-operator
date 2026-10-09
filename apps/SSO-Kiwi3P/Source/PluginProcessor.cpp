@@ -6,9 +6,32 @@ Kiwi3PProcessor::Kiwi3PProcessor()
       parameters (*this, nullptr, "SSO_Kiwi3P", sso::SynthController::createParameterLayout (device)),
       controller (device, parameters)
 {
+    juce::MessageManager::callAsync ([this, alive = aliveFlag]
+    {
+        if (*alive)
+            controller.setInstanceDescription (wrapperType == wrapperType_Standalone
+                                                   ? juce::String ("the SSO standalone app")
+                                                   : juce::String (juce::PluginHostType().getHostDescription()) + " (plugin)");
+    });
 }
 
-Kiwi3PProcessor::~Kiwi3PProcessor() = default;
+void Kiwi3PProcessor::updateTrackProperties (const TrackProperties& properties)
+{
+    // May be called on any thread
+    auto trackName = properties.name.value_or (juce::String());
+
+    juce::MessageManager::callAsync ([this, alive = aliveFlag, trackName]
+    {
+        if (*alive && trackName.isNotEmpty())
+            controller.setInstanceDescription (juce::String (juce::PluginHostType().getHostDescription())
+                                               + " - track \"" + trackName + "\"");
+    });
+}
+
+Kiwi3PProcessor::~Kiwi3PProcessor()
+{
+    *aliveFlag = false;
+}
 
 void Kiwi3PProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {

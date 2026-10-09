@@ -3,6 +3,8 @@
 int runHardwareTest (const juce::String& portName);
 int runSnapshot (const juce::StringArray& args);
 int runPlayTest (const juce::String& portName);
+int runHoldSynth (const juce::String& port);
+int runVst3StateTest (const juce::StringArray& args);
 
 struct ConsoleLogger final : public juce::Logger
 {
@@ -16,6 +18,12 @@ int main (int argc, char* argv[])
     juce::Logger::setCurrentLogger (&logger);
     const juce::ScopeGuard resetLogger { [] { juce::Logger::setCurrentLogger (nullptr); } };
     juce::StringArray args (argv + 1, argc - 1);
+
+    if (args.contains ("--vst3-state"))
+        return runVst3StateTest (args);
+
+    if (args.contains ("--hold-synth"))
+        return runHoldSynth (args[args.indexOf ("--hold-synth") + 1]);
 
     if (args.contains ("--play-test"))
         return runPlayTest (args[args.indexOf ("--play-test") + 1]);

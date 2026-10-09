@@ -69,22 +69,79 @@ SynthController::SynthController (const DeviceDefinition& d, juce::AudioProcesso
         });
     };
 
-    connection.onStateChanged = [this] { sendChangeMessage(); };
+    connection.onStateChanged = [this] { connectionChanged(); };
 
     auto& props = settings->get();
     midiChannel = props.getIntValue (settingsKey ("channel"), 1);
     deviceId = props.getIntValue (settingsKey ("deviceId"), 0);
     connection.setOutput (props.getValue (settingsKey ("midiOut")));
     connection.setInput (props.getValue (settingsKey ("midiIn")));
+
+    registeredKey = getOwnershipKey();
+    registered = true;
+    registry->add (*this);
 }
 
 SynthController::~SynthController()
 {
+    registry->remove (*this);
+
     connection.onMessageReceived = nullptr;
     connection.onStateChanged = nullptr;
 
     for (auto& spec : device.getParams())
         state.removeParameterListener (spec.id, this);
+}
+
+//==============================================================================
+juce::String SynthController::getOwnershipKey() const
+{
+    return OwnershipRegistry::makeKey (device.getDeviceId(), connection.getOutputId(), midiChannel.load());
+}
+
+void SynthController::ownershipChanged (bool isOwner, bool takenOver)
+{
+    auto wasActive = active;
+    active = isOwner;
+    sender.setMuted (! active);
+
+    if (active && ! wasActive && takenOver)
+        pendingSend = true;     // the user wants this instance's sound on the synth
+
+    sendPendingSoundIfPossible();
+    sendChangeMessage();
+}
+
+void SynthController::connectionChanged()
+{
+    // Port changes change which synth this instance talks to
+    if (registered && getOwnershipKey() != registeredKey)
+    {
+        registeredKey = getOwnershipKey();
+        registry->keyChanged (*this);
+    }
+
+    sendPendingSoundIfPossible();
+    sendChangeMessage();
+}
+
+void SynthController::sendPendingSoundIfPossible()
+{
+    if (! pendingSend || ! active || ! connection.isOutputOpen())
+        return;
+
+    pendingSend = false;
+    silence();
+    sendToSynth();
+}
+
+void SynthController::setInstanceDescription (const juce::String& d)
+{
+    if (d == description)
+        return;
+
+    description = d;
+    registry->descriptionChanged (*this);
 }
 
 //==============================================================================
@@ -174,6 +231,9 @@ void SynthController::loadPatch (const Patch& patch, bool sendToSynthNow)
 
 void SynthController::requestFromSynth()
 {
+    if (! active)
+        return;
+
     sender.enqueue (device.createEditBufferRequest (getMidiSettings()));
     setSyncState (SyncState::waitingForSynth);
 }
@@ -241,6 +301,7 @@ void SynthController::setMidiChannel (int channel)
 {
     midiChannel = juce::jlimit (1, 16, channel);
     settings->get().setValue (settingsKey ("channel"), midiChannel.load());
+    connectionChanged();
 }
 
 void SynthController::setDeviceId (int id)
@@ -269,6 +330,9 @@ void SynthController::setSyncState (SyncState s)
 
 void SynthController::handleIncomingMessage (const juce::MidiMessage& m)
 {
+    if (! active)
+        return;     // answers to another instance's requests
+
     auto incoming = device.parsePatchDump (getMidiSettings(), m);
 
     if (! incoming.has_value())
@@ -307,8 +371,14 @@ void SynthController::fromValueTree (const juce::ValueTree& v)
 
     auto patch = Patch::fromBase64 (v.getProperty ("patch").toString());
 
+    // Restore the sound (e.g. when a project is opened) and put it on the synth - now, or as
+    // soon as the MIDI port is available and this instance controls the synth.
     if (patch.data.size() == (size_t) device.getPatchSize())
-        loadPatch (patch, connection.isOutputOpen());
+    {
+        loadPatch (patch, false);
+        pendingSend = true;
+        sendPendingSoundIfPossible();
+    }
 
     auto file = v.getProperty ("presetFile").toString();
     setPresetRef ({ file.isNotEmpty() ? juce::File (file) : juce::File(),

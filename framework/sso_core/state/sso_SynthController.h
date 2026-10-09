@@ -14,6 +14,7 @@ namespace sso
     are meant to be called on the message thread.
 */
 class SynthController : private juce::AudioProcessorValueTreeState::Listener,
+                        private OwnershipRegistry::Member,
                         public juce::ChangeBroadcaster
 {
 public:
@@ -79,6 +80,17 @@ public:
     void setMidiOutput (const juce::String& identifier);
     void setMidiInput (const juce::String& identifier);
 
+    //==============================================================================
+    /** Only one instance controls a synth at a time (see OwnershipRegistry). An inactive
+        instance keeps its sound but sends nothing until the user takes over. */
+    bool isActive() const noexcept                  { return active; }
+    juce::String getOwnerDescription() const        { return registry->getOwnerDescription (*this); }
+    void takeOver()                                 { registry->takeOver (*this); }
+    bool isTakingOver() const                       { return registry->isTakingOver (*this); }
+
+    /** How other instances see this one, e.g. "Cubase - track Pad". */
+    void setInstanceDescription (const juce::String&);
+
     enum class SyncState { unknown, waitingForSynth, inSync, edited };
     SyncState getSyncState() const noexcept { return syncState; }
     juce::Time getLastReceiveTime() const noexcept { return lastReceive; }
@@ -88,6 +100,13 @@ public:
     void fromValueTree (const juce::ValueTree&);
 
 private:
+    // OwnershipRegistry::Member
+    juce::String getOwnershipKey() const override;
+    juce::String getInstanceDescription() const override   { return description; }
+    void ownershipChanged (bool isOwner, bool takenOver) override;
+    void connectionChanged();
+    void sendPendingSoundIfPossible();
+
     void parameterChanged (const juce::String& parameterID, float newValue) override;
     void handleIncomingMessage (const juce::MidiMessage&);
     void applyPatchToParameters (const Patch&);
@@ -95,6 +114,7 @@ private:
     juce::String settingsKey (const char* name) const   { return device.getDeviceId() + "." + name; }
 
     juce::SharedResourcePointer<AppSettings> settings;
+    juce::SharedResourcePointer<OwnershipRegistry> registry;
     const DeviceDefinition& device;
     juce::AudioProcessorValueTreeState& state;
     MidiConnection connection;
@@ -111,6 +131,11 @@ private:
     std::atomic<int> lastUserParam { -1 };
     std::atomic<uint32_t> userChangeCount { 0 };
     PresetRef presetRef;
+    bool active = true;
+    bool pendingSend = false;           // a restored sound still has to go to the synth
+    bool registered = false;
+    juce::String registeredKey;
+    juce::String description { "SSO" };
 
     JUCE_DECLARE_WEAK_REFERENCEABLE (SynthController)
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SynthController)

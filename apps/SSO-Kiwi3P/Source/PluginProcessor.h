@@ -28,6 +28,8 @@ public:
     const juce::String getProgramName (int) override { return {}; }
     void changeProgramName (int, const juce::String&) override {}
 
+    void updateTrackProperties (const TrackProperties&) override;
+
     void getStateInformation (juce::MemoryBlock&) override;
     void setStateInformation (const void*, int) override;
 
@@ -38,5 +40,7 @@ public:
     std::unique_ptr<sso::PatchGenerator> generator = sso::kiwi3p::createGenerator (device);
 
 private:
+    std::shared_ptr<bool> aliveFlag = std::make_shared<bool> (true);   // guards async callbacks
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Kiwi3PProcessor)
 };

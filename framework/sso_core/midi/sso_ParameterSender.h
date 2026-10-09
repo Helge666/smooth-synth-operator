@@ -30,6 +30,9 @@ public:
     void enqueue (const juce::MidiMessage&);
 
     void setFrozen (bool) noexcept;
+
+    /** While muted nothing is sent; pending changes and queued messages are dropped. */
+    void setMuted (bool) noexcept;
     bool isFrozen() const noexcept { return frozen.load(); }
 
 private:
@@ -43,7 +46,7 @@ private:
     const int numParams;
     std::unique_ptr<std::atomic<int>[]> values;
     std::unique_ptr<std::atomic<bool>[]> dirty;
-    std::atomic<bool> frozen { false };
+    std::atomic<bool> frozen { false }, muted { false };
 
     juce::CriticalSection queueLock;
     std::deque<juce::MidiMessage> queue;

@@ -3,11 +3,13 @@
 Kiwi3PEditor::Content::Content (Kiwi3PProcessor& p)
     : browser (p.library, p.controller),
       header (p.controller, "Kiwi-3P Programmer"),
-      panel (p.controller, p.parameters, *p.generator)
+      panel (p.controller, p.parameters, *p.generator),
+      inactiveOverlay (p.controller)
 {
     addAndMakeVisible (browser);
     addAndMakeVisible (header);
     addAndMakeVisible (panel);
+    addChildComponent (inactiveOverlay);    // shows itself while the instance is inactive
 
     header.getDisplay().onRenameRequested = [this] { browser.renameCurrent(); };
 }
@@ -24,6 +26,8 @@ void Kiwi3PEditor::Content::resized()
 
     if (browserVisible)
         browser.setBounds (r.removeFromLeft (browserWidth));
+
+    inactiveOverlay.setBounds (getLocalBounds());
 
     r.reduce (20, 18);
     header.setBounds (r.removeFromTop (84));

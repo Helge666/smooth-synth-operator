@@ -32,6 +32,7 @@
 #include "midi/sso_MidiConnection.h"
 #include "midi/sso_ParameterSender.h"
 #include "state/sso_AppSettings.h"
+#include "state/sso_SynthOwnership.h"
 #include "state/sso_SynthController.h"
 #include "midi/sso_TestNotePlayer.h"
 #include "library/sso_Preset.h"
@@ -46,4 +47,5 @@
 #include "gui/sso_SynthMemoryPanel.h"
 #include "gui/sso_PresetBrowser.h"
 #include "gui/sso_GeneratorPanel.h"
+#include "gui/sso_InactiveOverlay.h"
 #include "gui/sso_GenericParamPanel.h"
