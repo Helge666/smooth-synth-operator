@@ -69,7 +69,7 @@ namespace
         r["key_follow"] = range (50, 90);
 
         r["vca_mode"] = fixed (env2);           // ENV-2 -> amp
-        r["vca_level"] = range (95, 110);
+        r["vca_level"] = range (45, 62);        // as loud as the factory sounds (VCA median 62, but brighter)
         r["vca_lfo"] = fixed (0);
         r["vca_lfo_src"] = fixed (1);
 
@@ -147,7 +147,7 @@ namespace
         r["resonance"] = range (0, 40);
         r["vcf_env"] = bipolar (15, 42);
         envelope (r, "env1", range (0, 15), range (40, 80), range (30, 80), range (20, 50));
-        envelope (r, "env2", range (0, 10), range (50, 90), range (90, 127), range (25, 55));
+        envelope (r, "env2", range (0, 10), range (50, 90), range (90, 127), range (15, 40));
         r["chorus"] = pick ({ { chorusAuto, 0.75f }, { chorusOff, 0.25f } });
         return r;
     }
@@ -302,8 +302,8 @@ std::unique_ptr<PatchGenerator> createGenerator (const Kiwi3PDevice& device)
         auto get = [&] (const char* id) { return device.getValue (p, device.indexOf (id)); };
         auto set = [&] (const char* id, int v) { device.setValue (p, device.indexOf (id), v); };
 
-        if (get ("vca_level") < 70)
-            set ("vca_level", 90);
+        if (get ("vca_level") < 35)
+            set ("vca_level", 50);
 
         // An amp envelope that decays to silence needs some decay time to be heard
         auto ampEnv = get ("vca_mode") == env1 ? "env1" : "env2";
