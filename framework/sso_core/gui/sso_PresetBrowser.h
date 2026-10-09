@@ -31,7 +31,11 @@ private:
 
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
 
-    void rebuildFilterButtons();
+    void rebuildFilterButtons();       // only when the set of banks changes
+    void updateFilterButtonStates();   // after a filter change - never deletes buttons
+    void selectBank (const juce::String&);
+    void selectCategory (const juce::String&);
+    void toggleFavourites();
     void refreshResults();
     const Preset* presetForRow (int row) const;
     void loadPreset (const Preset&);
@@ -46,6 +50,8 @@ private:
 
     juce::TextEditor search;
     juce::OwnedArray<juce::TextButton> bankButtons, categoryButtons;
+    juce::StringArray bankValues, categoryValues;    // filter value per button ("" = all)
+    juce::StringArray shownBanks;
     juce::ListBox list;
     juce::TextButton saveButton { "SAVE" }, saveAsButton { "SAVE AS..." }, importButton { "IMPORT .SYX" };
     SynthMemoryPanel memory;

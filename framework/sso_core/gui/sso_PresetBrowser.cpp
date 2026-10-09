@@ -45,7 +45,9 @@ void PresetBrowser::changeListenerCallback (juce::ChangeBroadcaster* source)
 {
     if (source == &library)
     {
-        rebuildFilterButtons();
+        if (library.getBanks() != shownBanks)
+            rebuildFilterButtons();
+
         refreshResults();
     }
 
@@ -54,51 +56,84 @@ void PresetBrowser::changeListenerCallback (juce::ChangeBroadcaster* source)
 
 void PresetBrowser::rebuildFilterButtons()
 {
+    // Never call this from a chip's own onClick: it deletes the buttons.
     bankButtons.clear();
     categoryButtons.clear();
+    bankValues.clear();
+    categoryValues.clear();
 
-    auto makeChip = [this] (juce::OwnedArray<juce::TextButton>& array, const juce::String& text, bool selected,
-                            std::function<void()> onClick)
+    auto makeChip = [this] (juce::OwnedArray<juce::TextButton>& array, const juce::String& text, std::function<void()> onClick)
     {
         auto* b = array.add (new juce::TextButton (text));
         b->setClickingTogglesState (false);
-        b->setToggleState (selected, juce::dontSendNotification);
         b->onClick = std::move (onClick);
         addAndMakeVisible (b);
     };
 
-    auto banks = library.getBanks();
+    shownBanks = library.getBanks();
+
+    if (filter.bank.isNotEmpty() && ! shownBanks.contains (filter.bank))
+        filter.bank = {};
+
+    auto banks = shownBanks;
     banks.insert (0, {});
 
     for (auto& bank : banks)
-        makeChip (bankButtons, bank.isEmpty() ? juce::String ("All") : bank, filter.bank == bank, [this, bank]
-        {
-            filter.bank = bank;
-            rebuildFilterButtons();
-            refreshResults();
-        });
+    {
+        bankValues.add (bank);
+        makeChip (bankButtons, bank.isEmpty() ? juce::String ("All") : bank, [this, bank] { selectBank (bank); });
+    }
 
     auto categories = Categories::all();
     categories.insert (0, {});
 
     for (auto& cat : categories)
-        makeChip (categoryButtons, cat.isEmpty() ? juce::String ("All") : cat,
-                  filter.category == cat && ! (cat.isEmpty() && filter.favoritesOnly), [this, cat]
-        {
-            filter.category = cat;
-            filter.favoritesOnly = false;
-            rebuildFilterButtons();
-            refreshResults();
-        });
-
-    makeChip (categoryButtons, favouritesChip, filter.favoritesOnly, [this]
     {
-        filter.favoritesOnly = ! filter.favoritesOnly;
-        rebuildFilterButtons();
-        refreshResults();
-    });
+        categoryValues.add (cat);
+        makeChip (categoryButtons, cat.isEmpty() ? juce::String ("All") : cat, [this, cat] { selectCategory (cat); });
+    }
 
+    makeChip (categoryButtons, favouritesChip, [this] { toggleFavourites(); });
+
+    updateFilterButtonStates();
     resized();
+}
+
+void PresetBrowser::updateFilterButtonStates()
+{
+    for (int i = 0; i < bankButtons.size(); ++i)
+        bankButtons[i]->setToggleState (bankValues[i] == filter.bank, juce::dontSendNotification);
+
+    // the favourites chip is the last category button and has no category value
+    for (int i = 0; i < categoryButtons.size(); ++i)
+    {
+        auto isFavourites = i >= categoryValues.size();
+        categoryButtons[i]->setToggleState (isFavourites ? filter.favoritesOnly
+                                                         : (categoryValues[i] == filter.category && ! (categoryValues[i].isEmpty() && filter.favoritesOnly)),
+                                            juce::dontSendNotification);
+    }
+}
+
+void PresetBrowser::selectBank (const juce::String& bank)
+{
+    filter.bank = bank;
+    updateFilterButtonStates();
+    refreshResults();
+}
+
+void PresetBrowser::selectCategory (const juce::String& category)
+{
+    filter.category = category;
+    filter.favoritesOnly = false;
+    updateFilterButtonStates();
+    refreshResults();
+}
+
+void PresetBrowser::toggleFavourites()
+{
+    filter.favoritesOnly = ! filter.favoritesOnly;
+    updateFilterButtonStates();
+    refreshResults();
 }
 
 void PresetBrowser::refreshResults()

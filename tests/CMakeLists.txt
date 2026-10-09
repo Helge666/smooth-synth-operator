@@ -1,6 +1,6 @@
 juce_add_console_app(SSO_Tests PRODUCT_NAME "SSO Tests")
 
-target_sources(SSO_Tests PRIVATE TestMain.cpp Kiwi3PDeviceTests.cpp LibraryTests.cpp HardwareTest.cpp Snapshot.cpp
+target_sources(SSO_Tests PRIVATE TestMain.cpp Kiwi3PDeviceTests.cpp LibraryTests.cpp GuiTests.cpp HardwareTest.cpp Snapshot.cpp
     # the app's processor and GUI, for offscreen snapshots
     ../apps/SSO-Kiwi3P/Source/PluginProcessor.cpp
     ../apps/SSO-Kiwi3P/Source/PluginEditor.cpp
