@@ -57,6 +57,9 @@ public:
 
     static juce::String makeKey (const juce::String& deviceId, const juce::String& portId, int channel);
 
+    /** Appends to %TEMP%/SSO-ownership/ownership.log (diagnostics for host behaviour). */
+    void log (const juce::String&) const;
+
 private:
     struct Slot
     {
@@ -73,7 +76,6 @@ private:
     juce::File fileFor (const juce::String& key, const char* suffix) const;
     void notifyAll (const juce::String& key);
     juce::String keyOf (const Member&) const;
-    void log (const juce::String&) const;
     juce::String describe (const Member&) const;
 
     std::map<juce::String, Slot> slots;

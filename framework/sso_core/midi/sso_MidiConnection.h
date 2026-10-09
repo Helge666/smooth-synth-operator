@@ -34,9 +34,24 @@ public:
     uint32_t getNumSent() const noexcept      { return numSent.load(); }
     uint32_t getNumReceived() const noexcept  { return numReceived.load(); }
 
+    //==============================================================================
+    /** MIDI loop protection: if messages we sent come back on our input, something routes
+        our output back to us (MIDI thru, a merger, a DAW track with thru). Then sending is
+        stopped until clearLoopDetected() - a loop can corrupt the synth's memory. */
+    bool isLoopDetected() const noexcept      { return loopDetected.load(); }
+    void clearLoopDetected();
+
+    /** Called on the message thread when a loop is detected. */
+    std::function<void()> onLoopDetected;
+
+    /** Feeds a message as if it had arrived on the input (used by the MIDI callback and tests). */
+    void processIncoming (const juce::MidiMessage&);
+
 private:
     void handleIncomingMidiMessage (juce::MidiInput*, const juce::MidiMessage&) override;
     void deviceListChanged();
+    void rememberSent (const juce::MidiMessage&);
+    bool isEchoOfSent (const juce::MidiMessage&);
     bool openOutput();
     bool openInput();
 
@@ -45,6 +60,15 @@ private:
     std::unique_ptr<juce::MidiInput> input;
     juce::String wantedOutput, wantedInput;
     std::atomic<uint32_t> numSent { 0 }, numReceived { 0 };
+
+    struct SentMessage { uint64_t hash = 0; double timeMs = -1.0e9; };
+    std::array<SentMessage, 64> recentlySent;
+    size_t sentPosition = 0;
+    juce::CriticalSection sentLock;
+    int echoCount = 0;
+    double firstEchoMs = 0;
+    std::atomic<bool> loopDetected { false };
+    std::shared_ptr<bool> alive = std::make_shared<bool> (true);
     juce::MidiDeviceListConnection deviceListConnection;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MidiConnection)

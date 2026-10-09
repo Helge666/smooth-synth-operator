@@ -215,6 +215,7 @@ int runVst3StateTest (const juce::StringArray& args)
         {
             synth.send (*original);
             auto before = synth.value (*synth.editBuffer(), "cutoff");
+            pumpMs (500);   // the active instance also receives that answer and adopts it - let it settle
 
             findParameter (*second, "VCF Cutoff")->setValueNotifyingHost (5.0f / 127.0f);
             process (*second, 30);
@@ -223,11 +224,15 @@ int runVst3StateTest (const juce::StringArray& args)
             check (afterSecond.has_value() && synth.value (*afterSecond, "cutoff") == before,
                    "second (inactive) instance sends nothing");
 
-            findParameter (*first, "VCF Cutoff")->setValueNotifyingHost (99.0f / 127.0f);
+            auto* firstCutoff = findParameter (*first, "VCF Cutoff");
+            firstCutoff->setValueNotifyingHost (99.0f / 127.0f);
             process (*first, 30);
             pumpMs (300);
+            std::cout << "  (first instance cutoff parameter now " << juce::roundToInt (firstCutoff->getValue() * 127.0f) << ")" << std::endl;
             auto afterFirst = synth.editBuffer();
-            check (afterFirst.has_value() && synth.value (*afterFirst, "cutoff") == 99, "first (active) instance controls the synth");
+            check (afterFirst.has_value() && synth.value (*afterFirst, "cutoff") == 99,
+                   "first (active) instance controls the synth (cutoff before " + juce::String (before) + ", after "
+                       + (afterFirst.has_value() ? juce::String (synth.value (*afterFirst, "cutoff")) : juce::String ("no answer")) + ")");
 
             first->releaseResources();
             second->releaseResources();

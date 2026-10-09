@@ -44,6 +44,7 @@ private:
 
     SynthController& controller;
     juce::ComboBox outputBox, inputBox, channelBox;
+    juce::TextButton resumeButton { "RESUME SENDING" };
     juce::Array<juce::MidiDeviceInfo> outputs, inputs;
 };
 

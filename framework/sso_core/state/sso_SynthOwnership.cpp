@@ -104,7 +104,7 @@ void OwnershipRegistry::notifyAll (const juce::String& key)
 
     for (auto& [member, memberKey] : copy)
         if (memberKey == key)
-            member->ownershipChanged (slots[key].owner == member, false);
+            member->ownershipChanged (key.isEmpty() || slots[key].owner == member, false);
 }
 
 void OwnershipRegistry::add (Member& m)
@@ -205,6 +205,9 @@ void OwnershipRegistry::keyChanged (Member& m)
 void OwnershipRegistry::descriptionChanged (Member& m)
 {
     auto key = keyOf (m);
+
+    if (key.isEmpty())
+        return;
 
     if (key.isNotEmpty() && slots[key].owner == &m)
         writeOwnerFile (key, slots[key]);

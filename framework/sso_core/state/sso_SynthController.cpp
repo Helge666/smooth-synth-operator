@@ -70,12 +70,22 @@ SynthController::SynthController (const DeviceDefinition& d, juce::AudioProcesso
     };
 
     connection.onStateChanged = [this] { connectionChanged(); };
+    connection.onLoopDetected = [this]
+    {
+        registry->log ("MIDI loop detected - sending stopped");
+        sendChangeMessage();
+    };
 
     auto& props = settings->get();
     midiChannel = props.getIntValue (settingsKey ("channel"), 1);
     deviceId = props.getIntValue (settingsKey ("deviceId"), 0);
     connection.setOutput (props.getValue (settingsKey ("midiOut")));
     connection.setInput (props.getValue (settingsKey ("midiIn")));
+
+    registry->log ("controller created, settings " + props.getFile().getFullPathName()
+                   + (props.getFile().existsAsFile() ? "" : " (missing)")
+                   + ", midiOut '" + props.getValue (settingsKey ("midiOut")) + "'"
+                   + ", output open: " + (connection.isOutputOpen() ? "yes" : "no"));
 
     registeredKey = getOwnershipKey();
     registered = true;
@@ -104,6 +114,9 @@ void SynthController::ownershipChanged (bool isOwner, bool takenOver)
     auto wasActive = active;
     active = isOwner;
     sender.setMuted (! active);
+
+    if (active != wasActive)
+        registry->log ("  " + description + ": " + (active ? "active" : "inactive") + (takenOver ? " (taken over)" : ""));
 
     if (active && ! wasActive && takenOver)
         pendingSend = true;     // the user wants this instance's sound on the synth

@@ -46,6 +46,9 @@ juce::String LcdDisplay::statusLine() const
 {
     auto& conn = controller.getConnection();
 
+    if (conn.isLoopDetected())
+        return "MIDI LOOP DETECTED - SENDING STOPPED (SEE MIDI)";
+
     if (! conn.isOutputOpen())
         return "NO MIDI OUTPUT - CLICK MIDI TO SET UP";
 
@@ -98,6 +101,7 @@ void LcdDisplay::paint (juce::Graphics& g)
     }
     else
     {
+        g.setColour (controller.getConnection().isLoopDetected() ? theme::red : theme::lcdDim);
         g.drawText (statusLine(), inner, juce::Justification::centredLeft);
     }
 }
@@ -132,8 +136,18 @@ MidiSettingsPanel::MidiSettingsPanel (SynthController& c) : controller (c)
     for (auto* box : { &outputBox, &inputBox, &channelBox })
         addAndMakeVisible (box);
 
+    resumeButton.setColour (juce::TextButton::buttonColourId, theme::red);
+    resumeButton.onClick = [this]
+    {
+        controller.getConnection().clearLoopDetected();
+        controller.sendChangeMessage();
+        resized();
+        repaint();
+    };
+    addChildComponent (resumeButton);
+
     fill();
-    setSize (380, 170);
+    setSize (420, 330);
 }
 
 void MidiSettingsPanel::fill()
@@ -178,6 +192,17 @@ void MidiSettingsPanel::paint (juce::Graphics& g)
         g.drawText (text, r.removeFromTop (18), juce::Justification::bottomLeft);
         r.removeFromTop (32);
     }
+
+    r.removeFromTop (8);
+    auto loop = controller.getConnection().isLoopDetected();
+    g.setColour (loop ? theme::red : theme::textDim);
+    g.setFont (theme::label (13.0f, loop));
+    g.drawFittedText (loop ? juce::String ("MIDI loop detected: messages sent to the synth came back on the MIDI input. "
+                                           "Sending has been stopped. Fix the routing, then resume.")
+                           : juce::String ("Avoid MIDI loops: the synth's MIDI OUT must not be routed back to its MIDI IN "
+                                           "(e.g. in Cubase remove the synth's input from 'All MIDI Inputs' and don't use "
+                                           "MIDI thru for it). Loops can corrupt the synth's memory."),
+                      r.removeFromTop (70), juce::Justification::topLeft, 5);
 }
 
 void MidiSettingsPanel::resized()
@@ -190,6 +215,9 @@ void MidiSettingsPanel::resized()
         box->setBounds (r.removeFromTop (28));
         r.removeFromTop (4);
     }
+
+    resumeButton.setVisible (controller.getConnection().isLoopDetected());
+    resumeButton.setBounds (r.removeFromBottom (32).removeFromLeft (160));
 }
 
 //==============================================================================
