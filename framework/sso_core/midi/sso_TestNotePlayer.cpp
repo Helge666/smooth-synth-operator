@@ -41,8 +41,7 @@ void TestNotePlayer::play (std::vector<Event> phrase)
     stop();
 
     // Silence release tails of earlier notes so the phrase starts on a quiet synth.
-    // (CC 120 All Sound Off - the Kiwi-3P ignores CC 123 All Notes Off, measured.)
-    controller.sendMidi (juce::MidiMessage::allSoundOff (controller.getMidiSettings().channel));
+    controller.silence();
 
     {
         const juce::ScopedLock sl (lock);
@@ -71,7 +70,7 @@ void TestNotePlayer::stop()
             controller.sendMidi (juce::MidiMessage::noteOff (settings.channel, n));
 
         if (wasPlaying)
-            controller.sendMidi (juce::MidiMessage::allSoundOff (settings.channel));
+            controller.silence();
 
         sounding.clear();
     }

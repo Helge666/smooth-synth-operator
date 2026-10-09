@@ -204,6 +204,12 @@ void SynthController::sendMidi (const juce::MidiMessage& m)
     sender.enqueue (m);
 }
 
+void SynthController::silence()
+{
+    // CC 120 All Sound Off. (The Kiwi-3P ignores CC 123 All Notes Off.)
+    sendMidi (juce::MidiMessage::allSoundOff (getMidiSettings().channel));
+}
+
 void SynthController::requestSlot (int slot)
 {
     sender.enqueue (device.createSlotRequest (getMidiSettings(), slot));

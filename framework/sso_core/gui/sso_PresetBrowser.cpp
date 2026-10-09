@@ -236,6 +236,7 @@ juce::String PresetBrowser::getTooltipForRow (int row)
 //==============================================================================
 void PresetBrowser::loadPreset (const Preset& p)
 {
+    controller.silence();
     controller.loadPatch (p.patch, true);
     controller.setPresetRef ({ p.file, p.bank, p.category });
 }

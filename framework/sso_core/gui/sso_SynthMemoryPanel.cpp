@@ -150,6 +150,7 @@ void SynthMemoryPanel::loadSlotIntoEditor (int slot)
 
     auto slotName = controller.getDevice().getSlotName (slot);
     setStatus ("Loading " + slotName + "...");
+    controller.silence();
 
     reader.start ({ slot }, nullptr, [this, slot, slotName] (BankReader::Result result, bool complete)
     {

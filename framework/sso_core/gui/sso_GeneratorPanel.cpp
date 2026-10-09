@@ -76,6 +76,7 @@ void GeneratorPanel::apply (const Patch& patch, const juce::String& category)
         history.erase (history.begin());
 
     backButton.setEnabled (true);
+    controller.silence();
     controller.loadPatch (patch, true);
     controller.setPresetRef ({ {}, generatedBank, category });
 }
@@ -99,6 +100,7 @@ void GeneratorPanel::goBack()
 
     auto entry = history.back();
     history.pop_back();
+    controller.silence();
     controller.loadPatch (entry.patch, true);
     controller.setPresetRef (entry.ref);
     backButton.setEnabled (! history.empty());

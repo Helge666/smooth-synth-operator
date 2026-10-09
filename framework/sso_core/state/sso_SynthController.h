@@ -59,6 +59,9 @@ public:
     /** Sends a message (e.g. notes) to the synth, in order with all other output. Any thread. */
     void sendMidi (const juce::MidiMessage&);
 
+    /** Stops all sound on the synth immediately (also release tails). Call before switching sounds. */
+    void silence();
+
     /** Asks the synth for a stored sound. The answer arrives via onSlotReceived; it does
         not change the current sound in the editor (but the synth's edit buffer). */
     void requestSlot (int slot);
