@@ -4,5 +4,8 @@
 #include "midi/sso_MidiConnection.cpp"
 #include "midi/sso_ParameterSender.cpp"
 #include "state/sso_SynthController.cpp"
+#include "library/sso_Preset.cpp"
+#include "library/sso_PresetLibrary.cpp"
+#include "state/sso_BankReader.cpp"
 #include "gui/sso_GenericParamPanel.cpp"
 #include "gui/sso_ConnectionBar.cpp"

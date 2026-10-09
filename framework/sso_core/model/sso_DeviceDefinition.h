@@ -16,6 +16,7 @@ public:
     //==============================================================================
     virtual juce::String getDeviceId() const = 0;        // e.g. "kiwi3p" - stored in preset files
     virtual juce::String getDisplayName() const = 0;
+    virtual juce::String getLibraryFolderName() const = 0;  // e.g. "Kiwi-3P" (Documents/Smooth Synth Operator/<this>)
     virtual int getPatchSize() const = 0;
     virtual int getMaxNameLength() const = 0;
     virtual int getNumSlots() const = 0;                 // stored sound memories

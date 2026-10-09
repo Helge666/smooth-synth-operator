@@ -1,6 +1,6 @@
 juce_add_console_app(SSO_Tests PRODUCT_NAME "SSO Tests")
 
-target_sources(SSO_Tests PRIVATE TestMain.cpp Kiwi3PDeviceTests.cpp HardwareTest.cpp)
+target_sources(SSO_Tests PRIVATE TestMain.cpp Kiwi3PDeviceTests.cpp LibraryTests.cpp HardwareTest.cpp)
 
 target_compile_definitions(SSO_Tests PRIVATE
     JUCE_WEB_BROWSER=0

@@ -188,6 +188,11 @@ void SynthController::writeToSlot (int slot)
     sender.enqueue (device.createSlotDump (getMidiSettings(), getCurrentPatch(), slot));
 }
 
+void SynthController::requestSlot (int slot)
+{
+    sender.enqueue (device.createSlotRequest (getMidiSettings(), slot));
+}
+
 void SynthController::setFrozen (bool shouldFreeze)
 {
     sender.setFrozen (shouldFreeze);
@@ -238,8 +243,16 @@ void SynthController::handleIncomingMessage (const juce::MidiMessage& m)
 {
     auto incoming = device.parsePatchDump (getMidiSettings(), m);
 
-    if (! incoming.has_value() || incoming->slot >= 0)
+    if (! incoming.has_value())
         return;
+
+    if (incoming->slot >= 0)
+    {
+        if (onSlotReceived != nullptr)
+            onSlotReceived (*incoming);
+
+        return;
+    }
 
     lastReceive = juce::Time::getCurrentTime();
     basePatch = incoming->patch;

@@ -32,5 +32,8 @@
 #include "midi/sso_ParameterSender.h"
 #include "state/sso_AppSettings.h"
 #include "state/sso_SynthController.h"
+#include "library/sso_Preset.h"
+#include "library/sso_PresetLibrary.h"
+#include "state/sso_BankReader.h"
 #include "gui/sso_GenericParamPanel.h"
 #include "gui/sso_ConnectionBar.h"

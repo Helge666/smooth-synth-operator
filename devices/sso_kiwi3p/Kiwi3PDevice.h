@@ -19,6 +19,7 @@ public:
 
     juce::String getDeviceId() const override     { return "kiwi3p"; }
     juce::String getDisplayName() const override  { return "Roland JX-3P / Kiwi-3P"; }
+    juce::String getLibraryFolderName() const override { return "Kiwi-3P"; }
     int getPatchSize() const override             { return patchSize; }
     int getMaxNameLength() const override         { return nameLength; }
     int getNumSlots() const override              { return numSlots; }

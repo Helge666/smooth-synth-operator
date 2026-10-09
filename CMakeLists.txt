@@ -13,4 +13,5 @@ juce_add_module(framework/sso_core)
 juce_add_module(devices/sso_kiwi3p)
 
 add_subdirectory(apps/SSO-Kiwi3P)
+add_subdirectory(tools/sso-cli)
 add_subdirectory(tests)
