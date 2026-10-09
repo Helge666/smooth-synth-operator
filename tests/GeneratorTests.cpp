@@ -28,7 +28,7 @@ public:
                 auto what = cat + " #" + juce::String (n);
 
                 expectEquals ((int) p.data.size(), (int) sso::kiwi3p::Kiwi3PDevice::patchSize);
-                expect (get (p, "vca_level") >= 35 && get (p, "vca_level") <= 70, what + " level out of the factory range");
+                expect (get (p, "vca_level") >= 35 && get (p, "vca_level") <= 80, what + " level out of the factory range");
                 expectEquals (get (p, "vca_mode"), 2, what + " VCA not on ENV-2");
                 expect (get (p, "cutoff") + juce::jmax (0, get (p, "vcf_env") - 63) >= 35, what + " filter closed");
                 expect (get (p, "env2_sustain") >= 20 || get (p, "env2_decay") >= 30, what + " amp envelope too short");

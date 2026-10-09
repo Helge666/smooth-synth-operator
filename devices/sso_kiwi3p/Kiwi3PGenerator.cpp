@@ -124,8 +124,9 @@ namespace
         r["dco2_tune"] = pick ({ { centre, 0.75f }, { tuneFor (12), 0.15f }, { tuneFor (7), 0.1f } });
         r["dco2_fine"] = range (57, 69);
         r["xmod"] = pick ({ { 0, 0.85f }, { 1, 0.15f } });
-        r["cutoff"] = range (15, 55);
+        r["cutoff"] = range (25, 60);
         r["resonance"] = range (0, 85);
+        r["vca_level"] = range (62, 78);        // low notes need more level to sound as loud (measured ~10 dB quieter)
         r["vcf_env"] = bipolar (20, 58);
         r["key_follow"] = range (40, 90);
         envelope (r, "env1", range (0, 4), range (25, 70), range (0, 45), range (8, 30));
