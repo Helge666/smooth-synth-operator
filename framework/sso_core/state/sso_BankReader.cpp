@@ -11,9 +11,11 @@ BankReader::~BankReader()
 
 void BankReader::start (std::vector<int> slotsToRead,
                         std::function<void (int, int)> onProgress,
-                        std::function<void (Result, bool)> onFinished)
+                        std::function<void (Result, bool)> onFinished,
+                        bool restoreEditBuffer)
 {
     jassert (! running);
+    restoreAfterwards = restoreEditBuffer;
     slots = std::move (slotsToRead);
     progressCallback = std::move (onProgress);
     finishedCallback = std::move (onFinished);
@@ -78,7 +80,8 @@ void BankReader::finish (bool complete)
     controller.onSlotReceived = nullptr;
 
     // The requests replaced the synth's edit buffer - put the editor's sound back.
-    controller.sendToSynth();
+    if (restoreAfterwards)
+        controller.sendToSynth();
 
     if (finishedCallback != nullptr)
         finishedCallback (std::move (result), complete);

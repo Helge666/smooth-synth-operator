@@ -19,7 +19,8 @@ public:
     /** onProgress(done, total) and onFinished(result, complete) are called on the message thread. */
     void start (std::vector<int> slots,
                 std::function<void (int, int)> onProgress,
-                std::function<void (Result, bool complete)> onFinished);
+                std::function<void (Result, bool complete)> onFinished,
+                bool restoreEditBuffer = true);
 
     void cancel();
     bool isRunning() const noexcept { return running; }
@@ -35,6 +36,7 @@ private:
     size_t current = 0;
     int attempts = 0;
     bool running = false;
+    bool restoreAfterwards = true;
     Result result;
     std::function<void (int, int)> progressCallback;
     std::function<void (Result, bool)> finishedCallback;

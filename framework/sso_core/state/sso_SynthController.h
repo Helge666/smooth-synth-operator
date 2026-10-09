@@ -30,12 +30,31 @@ public:
     juce::String getPatchName() const;
     void setPatchName (const juce::String&);
 
+    /** Current value of a parameter (any thread). */
+    int getValue (int paramIndex) const noexcept   { return sender.getValue (paramIndex); }
+
+    /** The parameter the user (GUI or host) changed last, and a counter that increments
+        with every such change - for "last touched" displays. -1 = none yet. */
+    int getLastUserChange() const noexcept          { return lastUserParam.load(); }
+    uint32_t getUserChangeCount() const noexcept    { return userChangeCount.load(); }
+
+    /** Library preset the current sound was loaded from (empty file = none). */
+    struct PresetRef
+    {
+        juce::File file;
+        juce::String bank, category;
+    };
+
+    const PresetRef& getPresetRef() const noexcept  { return presetRef; }
+    void setPresetRef (PresetRef);
+
     /** Makes `patch` the current sound and optionally sends it to the synth's edit buffer. */
     void loadPatch (const Patch&, bool sendToSynth);
 
     void requestFromSynth();
     void sendToSynth();
     void writeToSlot (int slot);
+    void writePatchToSlot (const Patch&, int slot);
 
     /** Asks the synth for a stored sound. The answer arrives via onSlotReceived; it does
         not change the current sound in the editor (but the synth's edit buffer). */
@@ -83,6 +102,9 @@ private:
     std::atomic<int> midiChannel { 1 }, deviceId { 0 };
     std::atomic<SyncState> syncState { SyncState::unknown };
     juce::Time lastReceive;
+    std::atomic<int> lastUserParam { -1 };
+    std::atomic<uint32_t> userChangeCount { 0 };
+    PresetRef presetRef;
 
     JUCE_DECLARE_WEAK_REFERENCEABLE (SynthController)
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SynthController)

@@ -34,6 +34,7 @@ public:
     const sso::kiwi3p::Kiwi3PDevice device;
     juce::AudioProcessorValueTreeState parameters;
     sso::SynthController controller;
+    sso::PresetLibrary library { device };
 
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Kiwi3PProcessor)

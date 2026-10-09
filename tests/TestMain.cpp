@@ -1,6 +1,7 @@
 #include <sso_kiwi3p/sso_kiwi3p.h>
 
 int runHardwareTest (const juce::String& portName);
+int runSnapshot (const juce::StringArray& args);
 
 struct ConsoleLogger final : public juce::Logger
 {
@@ -14,6 +15,9 @@ int main (int argc, char* argv[])
     juce::Logger::setCurrentLogger (&logger);
     const juce::ScopeGuard resetLogger { [] { juce::Logger::setCurrentLogger (nullptr); } };
     juce::StringArray args (argv + 1, argc - 1);
+
+    if (args.contains ("--snapshot"))
+        return runSnapshot (args);
 
     if (args.contains ("--hardware"))
         return runHardwareTest (args[args.indexOf ("--hardware") + 1]);

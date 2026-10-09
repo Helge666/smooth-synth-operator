@@ -100,6 +100,12 @@ void SynthController::parameterChanged (const juce::String& parameterID, float n
     auto fromSynth = applyingFromSynth.load() > 0;
     sender.setValue (index, value, ! fromSynth);
 
+    if (! fromSynth)
+    {
+        lastUserParam = index;
+        ++userChangeCount;
+    }
+
     if (! fromSynth && syncState != SyncState::edited)
     {
         syncState = SyncState::edited;
@@ -188,9 +194,20 @@ void SynthController::writeToSlot (int slot)
     sender.enqueue (device.createSlotDump (getMidiSettings(), getCurrentPatch(), slot));
 }
 
+void SynthController::writePatchToSlot (const Patch& patch, int slot)
+{
+    sender.enqueue (device.createSlotDump (getMidiSettings(), patch, slot));
+}
+
 void SynthController::requestSlot (int slot)
 {
     sender.enqueue (device.createSlotRequest (getMidiSettings(), slot));
+}
+
+void SynthController::setPresetRef (PresetRef ref)
+{
+    presetRef = std::move (ref);
+    sendChangeMessage();
 }
 
 void SynthController::setFrozen (bool shouldFreeze)
@@ -266,6 +283,9 @@ juce::ValueTree SynthController::toValueTree() const
     juce::ValueTree v ("SynthController");
     v.setProperty ("patch", getCurrentPatch().toBase64(), nullptr);
     v.setProperty ("device", device.getDeviceId(), nullptr);
+    v.setProperty ("presetFile", presetRef.file.getFullPathName(), nullptr);
+    v.setProperty ("presetBank", presetRef.bank, nullptr);
+    v.setProperty ("presetCategory", presetRef.category, nullptr);
     return v;
 }
 
@@ -278,6 +298,10 @@ void SynthController::fromValueTree (const juce::ValueTree& v)
 
     if (patch.data.size() == (size_t) device.getPatchSize())
         loadPatch (patch, connection.isOutputOpen());
+
+    auto file = v.getProperty ("presetFile").toString();
+    setPresetRef ({ file.isNotEmpty() ? juce::File (file) : juce::File(),
+                    v.getProperty ("presetBank").toString(), v.getProperty ("presetCategory").toString() });
 }
 
 } // namespace sso

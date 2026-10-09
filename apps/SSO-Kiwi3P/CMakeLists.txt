@@ -15,7 +15,8 @@ juce_add_plugin(SSO_Kiwi3P
 
 target_sources(SSO_Kiwi3P PRIVATE
     Source/PluginProcessor.cpp
-    Source/PluginEditor.cpp)
+    Source/PluginEditor.cpp
+    Source/Kiwi3PPanel.cpp)
 
 target_compile_definitions(SSO_Kiwi3P PUBLIC
     JUCE_WEB_BROWSER=0
