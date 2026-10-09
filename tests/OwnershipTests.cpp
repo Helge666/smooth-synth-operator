@@ -32,6 +32,7 @@ namespace
         {
             controller.getConnection().setOutput (fakePort);
             controller.setInstanceDescription (name);
+            controller.startUsing();
         }
 
         DummyProcessor processor;
@@ -116,6 +117,21 @@ public:
             mover.controller.getConnection().setOutput (fakePort ("c"));
             pump (50);
             expect (mover.controller.isActive(), "instance on a new port becomes active");
+        }
+
+        beginTest ("Instances that are not in use do not claim the synth");
+        {
+            auto port = fakePort ("probe");
+            DummyProcessor processor;
+            juce::AudioProcessorValueTreeState state (processor, nullptr, "probe", sso::SynthController::createParameterLayout (device));
+            sso::SynthController probe (device, state);     // e.g. created by a host while scanning
+            probe.getConnection().setOutput (port);
+            pump (50);
+
+            TestInstance used (device, port, "used");
+            pump (50);
+            expect (used.controller.isActive(), "a probing instance does not block the synth");
+            expect (! probe.isActive());
         }
 
         beginTest ("Instances in different processes");

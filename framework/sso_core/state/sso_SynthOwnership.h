@@ -35,8 +35,14 @@ public:
     OwnershipRegistry();
     ~OwnershipRegistry() override;
 
+    /** Registers a member. It only claims the synth when claim() is called (when the
+        instance is really used), so instances a host creates just for scanning or probing
+        never block the synth. */
     void add (Member&);
     void remove (Member&);
+
+    /** Becomes owner if the synth is free. Idempotent. */
+    void claim (Member&);
     void keyChanged (Member&);
     void descriptionChanged (Member&);
 
@@ -67,9 +73,12 @@ private:
     juce::File fileFor (const juce::String& key, const char* suffix) const;
     void notifyAll (const juce::String& key);
     juce::String keyOf (const Member&) const;
+    void log (const juce::String&) const;
+    juce::String describe (const Member&) const;
 
     std::map<juce::String, Slot> slots;
     std::vector<std::pair<Member*, juce::String>> members;
+    std::set<Member*> claimed;          // members that are in use (want the synth when free)
     const juce::String processToken = juce::Uuid().toString();
 
     JUCE_DECLARE_NON_COPYABLE (OwnershipRegistry)

@@ -47,6 +47,7 @@ int runPlayTest (const juce::String& portPart)
     juce::AudioProcessorValueTreeState state (processor, nullptr, "test", sso::SynthController::createParameterLayout (device));
     sso::SynthController controller (device, state);
     controller.setMidiOutput (findPort (juce::MidiOutput::getAvailableDevices(), portPart));
+    controller.startUsing();
 
     sso::TestNotePlayer player (controller);
     player.play();
@@ -78,6 +79,7 @@ int runHardwareTest (const juce::String& portPart)
     auto inId  = findPort (juce::MidiInput::getAvailableDevices(), portPart);
     controller.setMidiOutput (outId);
     controller.setMidiInput (inId);
+    controller.startUsing();
     check (controller.getConnection().isOutputOpen() && controller.getConnection().isInputOpen(), "ports open (" + portPart + ")");
 
     auto fetch = [&]

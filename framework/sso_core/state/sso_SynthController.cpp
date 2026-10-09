@@ -377,6 +377,7 @@ void SynthController::fromValueTree (const juce::ValueTree& v)
     {
         loadPatch (patch, false);
         pendingSend = true;
+        startUsing();
         sendPendingSoundIfPossible();
     }
 

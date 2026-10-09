@@ -39,6 +39,7 @@ void Kiwi3PEditor::Content::resized()
 Kiwi3PEditor::Kiwi3PEditor (Kiwi3PProcessor& p)
     : AudioProcessorEditor (p), content (p)
 {
+    p.controller.startUsing();     // an open editor means this instance is in use
     setLookAndFeel (&lookAndFeel);
     juce::LookAndFeel::setDefaultLookAndFeel (&lookAndFeel);   // dialogs and menus
 

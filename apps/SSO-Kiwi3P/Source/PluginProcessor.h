@@ -8,7 +8,7 @@ public:
     Kiwi3PProcessor();
     ~Kiwi3PProcessor() override;
 
-    void prepareToPlay (double, int) override {}
+    void prepareToPlay (double, int) override       { juce::MessageManager::callAsync ([this, alive = aliveFlag] { if (*alive) controller.startUsing(); }); }
     void releaseResources() override {}
     bool isBusesLayoutSupported (const BusesLayout&) const override { return true; }
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;

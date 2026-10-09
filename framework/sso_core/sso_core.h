@@ -24,6 +24,7 @@
 #include <functional>
 #include <map>
 #include <optional>
+#include <set>
 #include <vector>
 
 #include "model/sso_ParamSpec.h"

@@ -86,6 +86,11 @@ public:
     bool isActive() const noexcept                  { return active; }
     juce::String getOwnerDescription() const        { return registry->getOwnerDescription (*this); }
     void takeOver()                                 { registry->takeOver (*this); }
+
+    /** Call when the instance is really used (prepared for playback, editor opened, project
+        state restored). Only then does it claim the synth - instances a host creates just
+        to scan or probe the plugin never block it. */
+    void startUsing()                               { registry->claim (*this); }
     bool isTakingOver() const                       { return registry->isTakingOver (*this); }
 
     /** How other instances see this one, e.g. "Cubase - track Pad". */

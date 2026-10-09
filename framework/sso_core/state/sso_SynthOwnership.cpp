@@ -6,6 +6,25 @@ static constexpr double takeOverTimeoutMs = 3000.0;
 OwnershipRegistry::OwnershipRegistry()
 {
     startTimer (200);
+    log ("registry created");
+}
+
+void OwnershipRegistry::log (const juce::String& message) const
+{
+    // Diagnostics for host-specific behaviour: %TEMP%/SSO-ownership/ownership.log
+    auto f = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("SSO-ownership").getChildFile ("ownership.log");
+    f.getParentDirectory().createDirectory();
+
+    if (f.getSize() > 512 * 1024)
+        f.deleteFile();
+
+    f.appendText (juce::Time::getCurrentTime().toString (true, true, true, true) + " [" + processToken.substring (0, 8) + "] "
+                  + message + "\n", false, false, "\n");
+}
+
+juce::String OwnershipRegistry::describe (const Member& m) const
+{
+    return "'" + m.getInstanceDescription() + "' (" + juce::String::toHexString ((juce::pointer_sized_int) &m) + ")";
 }
 
 OwnershipRegistry::~OwnershipRegistry()
@@ -49,7 +68,10 @@ bool OwnershipRegistry::tryAcquire (const juce::String& key, Slot& slot)
     auto lock = std::make_unique<juce::InterProcessLock> ("SSO-" + key);
 
     if (! lock->enter (0))
+    {
+        log ("lock for " + key + " is held by another process");
         return false;
+    }
 
     slot.lock = std::move (lock);
     return true;
@@ -89,6 +111,8 @@ void OwnershipRegistry::add (Member& m)
 {
     auto key = m.getOwnershipKey();
     members.emplace_back (&m, key);
+    log ("add " + describe (m) + " key " + (key.isEmpty() ? juce::String ("<none>") : key)
+         + (claimed.count (&m) > 0 ? " (in use)" : ""));
 
     if (key.isEmpty())
     {
@@ -98,24 +122,58 @@ void OwnershipRegistry::add (Member& m)
 
     auto& slot = slots[key];
 
-    // First come, first served: become owner if nobody in this or another process is
-    if (slot.owner == nullptr && tryAcquire (key, slot))
+    // First come, first served among instances that are in use
+    if (claimed.count (&m) > 0 && slot.owner == nullptr && tryAcquire (key, slot))
     {
         slot.owner = &m;
         writeOwnerFile (key, slot);
+        log ("  -> owner");
     }
 
     m.ownershipChanged (slot.owner == &m, false);
 }
 
-void OwnershipRegistry::remove (Member& m)
+void OwnershipRegistry::claim (Member& m)
 {
+    if (claimed.count (&m) > 0)
+        return;
+
+    claimed.insert (&m);
     auto key = keyOf (m);
-    members.erase (std::remove_if (members.begin(), members.end(), [&m] (auto& p) { return p.first == &m; }), members.end());
+    log ("claim " + describe (m));
 
     if (key.isEmpty())
         return;
 
+    auto& slot = slots[key];
+
+    if (slot.owner == nullptr && tryAcquire (key, slot))
+    {
+        slot.owner = &m;
+        writeOwnerFile (key, slot);
+        log ("  -> owner");
+        m.ownershipChanged (true, false);
+        notifyAll (key);
+    }
+    else
+    {
+        log ("  -> inactive, owner: " + (slot.owner != nullptr ? describe (*slot.owner) : getOwnerDescription (m)));
+    }
+}
+
+void OwnershipRegistry::remove (Member& m)
+{
+    auto key = keyOf (m);
+    log ("remove " + describe (m) + (slots.count (key) > 0 && slots[key].owner == &m ? " (owner)" : ""));
+    members.erase (std::remove_if (members.begin(), members.end(), [&m] (auto& p) { return p.first == &m; }), members.end());
+
+    if (key.isEmpty())
+    {
+        claimed.erase (&m);
+        return;
+    }
+
+    claimed.erase (&m);
     auto& slot = slots[key];
 
     if (slot.requester == &m)
@@ -133,8 +191,15 @@ void OwnershipRegistry::remove (Member& m)
 
 void OwnershipRegistry::keyChanged (Member& m)
 {
+    auto wasClaimed = claimed.count (&m) > 0;
     remove (m);
     add (m);
+
+    if (wasClaimed)
+    {
+        claimed.erase (&m);
+        claim (m);
+    }
 }
 
 void OwnershipRegistry::descriptionChanged (Member& m)
@@ -183,6 +248,8 @@ juce::String OwnershipRegistry::getOwnerDescription (const Member& m) const
 void OwnershipRegistry::takeOver (Member& m)
 {
     auto key = keyOf (m);
+    claimed.insert (&m);
+    log ("take over requested by " + describe (m));
 
     if (key.isEmpty())
         return;
@@ -202,12 +269,14 @@ void OwnershipRegistry::takeOver (Member& m)
         if (previous != nullptr)
             previous->ownershipChanged (false, false);
 
+        log ("  -> taken over directly from " + (previous != nullptr ? describe (*previous) : juce::String ("nobody")));
         m.ownershipChanged (true, true);
         notifyAll (key);
         return;
     }
 
     // Another process owns it: ask it to let go
+    log ("  -> asking the other process to release");
     auto request = fileFor (key, ".takeover");
     request.getParentDirectory().createDirectory();
     request.replaceWithText (processToken);
@@ -230,6 +299,7 @@ void OwnershipRegistry::timerCallback()
 
         if (slot.lock != nullptr && requestIsFresh && request.loadFileAsString() != processToken)
         {
+            log ("another process asks for " + key + " - releasing");
             auto* previous = slot.owner;
             slot.owner = nullptr;
             release (key, slot);
@@ -251,11 +321,13 @@ void OwnershipRegistry::timerCallback()
                 slot.requester = nullptr;
                 slot.owner = m;
                 writeOwnerFile (key, slot);
+                log ("  -> got " + key + " from the other process");
                 m->ownershipChanged (true, true);
                 notifyAll (key);
             }
             else if (juce::Time::getMillisecondCounterHiRes() - slot.requestStarted > takeOverTimeoutMs)
             {
+                log ("  -> the other process did not release " + key + " (timeout)");
                 request.deleteFile();
                 slot.requester = nullptr;
                 notifyAll (key);
