@@ -2,14 +2,16 @@
 
 #include <sso_kiwi3p/sso_kiwi3p.h>
 
-class Kiwi3PProcessor final : public juce::AudioProcessor
+class Kiwi3PProcessor final : public juce::AudioProcessor,
+                              private juce::ChangeListener
 {
 public:
     Kiwi3PProcessor();
     ~Kiwi3PProcessor() override;
 
-    void prepareToPlay (double, int) override       { juce::MessageManager::callAsync ([this, alive = aliveFlag] { if (*alive) controller.startUsing(); }); }
-    void releaseResources() override {}
+    void prepareToPlay (double sampleRate, int blockSize) override;
+    void releaseResources() override                { forwarder.releaseHeldNotes(); }
+    void processBlockBypassed (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     bool isBusesLayoutSupported (const BusesLayout&) const override { return true; }
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
@@ -38,8 +40,13 @@ public:
     sso::SynthController controller;
     sso::PresetLibrary library { device };
     std::unique_ptr<sso::PatchGenerator> generator = sso::kiwi3p::createGenerator (device);
+    sso::NoteForwarder forwarder { controller };    // plays the track's notes on the synth
 
 private:
+    void changeListenerCallback (juce::ChangeBroadcaster*) override;
+
+    std::atomic<bool> forwardNotes { true };
+    std::atomic<double> noteOffsetMs { 0.0 };
     std::shared_ptr<bool> aliveFlag = std::make_shared<bool> (true);   // guards async callbacks
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Kiwi3PProcessor)

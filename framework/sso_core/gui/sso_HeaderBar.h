@@ -45,6 +45,8 @@ private:
     SynthController& controller;
     juce::ComboBox outputBox, inputBox, channelBox;
     juce::TextButton resumeButton { "RESUME SENDING" };
+    juce::ToggleButton forwardToggle { "Play the track's notes on the synth" };
+    juce::Slider offsetSlider;
     juce::Array<juce::MidiDeviceInfo> outputs, inputs;
 };
 

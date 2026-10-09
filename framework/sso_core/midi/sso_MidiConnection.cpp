@@ -161,6 +161,10 @@ void MidiConnection::send (const juce::MidiMessage& m)
         return;     // never feed a loop
 
     rememberSent (m);
+
+    if (onMessageSent != nullptr)
+        onMessageSent (m);
+
     const juce::ScopedLock sl (outputLock);
 
     if (output != nullptr)

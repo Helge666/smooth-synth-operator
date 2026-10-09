@@ -76,6 +76,12 @@ public:
     void setMidiChannel (int channel1to16);
     void setDeviceId (int id0to15);
 
+    /** Playing the host track's notes on the synth (see NoteForwarder); remembered for all instances. */
+    bool getForwardNotes() const;
+    void setForwardNotes (bool);
+    double getNoteOffsetMs() const;
+    void setNoteOffsetMs (double);
+
     /** Opens the ports and remembers the choice for all instances. */
     void setMidiOutput (const juce::String& identifier);
     void setMidiInput (const juce::String& identifier);
@@ -83,7 +89,7 @@ public:
     //==============================================================================
     /** Only one instance controls a synth at a time (see OwnershipRegistry). An inactive
         instance keeps its sound but sends nothing until the user takes over. */
-    bool isActive() const noexcept                  { return active; }
+    bool isActive() const noexcept                  { return active.load(); }
     juce::String getOwnerDescription() const        { return registry->getOwnerDescription (*this); }
     void takeOver()                                 { registry->takeOver (*this); }
 
@@ -136,7 +142,7 @@ private:
     std::atomic<int> lastUserParam { -1 };
     std::atomic<uint32_t> userChangeCount { 0 };
     PresetRef presetRef;
-    bool active = true;
+    std::atomic<bool> active { true };
     bool pendingSend = false;           // a restored sound still has to go to the synth
     bool registered = false;
     juce::String registeredKey;

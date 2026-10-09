@@ -44,6 +44,10 @@ public:
     /** Called on the message thread when a loop is detected. */
     std::function<void()> onLoopDetected;
 
+    /** Called (on the sending thread) for every message passed to send() that is not blocked
+        by the loop protection - also when no port is open. For monitoring and tests. */
+    std::function<void (const juce::MidiMessage&)> onMessageSent;
+
     /** Feeds a message as if it had arrived on the input (used by the MIDI callback and tests). */
     void processIncoming (const juce::MidiMessage&);
 

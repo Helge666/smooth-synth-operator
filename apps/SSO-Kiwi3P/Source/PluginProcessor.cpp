@@ -6,6 +6,9 @@ Kiwi3PProcessor::Kiwi3PProcessor()
       parameters (*this, nullptr, "SSO_Kiwi3P", sso::SynthController::createParameterLayout (device)),
       controller (device, parameters)
 {
+    controller.addChangeListener (this);
+    changeListenerCallback (nullptr);
+
     juce::MessageManager::callAsync ([this, alive = aliveFlag]
     {
         if (*alive)
@@ -31,10 +34,47 @@ void Kiwi3PProcessor::updateTrackProperties (const TrackProperties& properties)
 Kiwi3PProcessor::~Kiwi3PProcessor()
 {
     *aliveFlag = false;
+    controller.removeChangeListener (this);
 }
 
-void Kiwi3PProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+void Kiwi3PProcessor::changeListenerCallback (juce::ChangeBroadcaster*)
 {
+    // forwarding settings are read on the audio thread
+    forwardNotes = controller.getForwardNotes();
+    noteOffsetMs = controller.getNoteOffsetMs();
+}
+
+void Kiwi3PProcessor::prepareToPlay (double newSampleRate, int maximumBlockSize)
+{
+    forwarder.prepare (newSampleRate, maximumBlockSize);
+
+    juce::MessageManager::callAsync ([this, alive = aliveFlag]
+    {
+        if (*alive)
+            controller.startUsing();
+    });
+}
+
+void Kiwi3PProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
+{
+    auto playing = false;
+
+    if (auto* hostPlayHead = getPlayHead())
+        if (auto position = hostPlayHead->getPosition())
+            playing = position->getIsPlaying();
+
+    forwarder.setEnabled (forwardNotes.load());
+    forwarder.setUserOffsetMs (noteOffsetMs.load());
+    forwarder.process (midi, buffer.getNumSamples(), playing);
+
+    midi.clear();       // the notes go straight to the synth
+    buffer.clear();
+}
+
+void Kiwi3PProcessor::processBlockBypassed (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
+{
+    forwarder.releaseHeldNotes();
+    midi.clear();
     buffer.clear();
 }
 

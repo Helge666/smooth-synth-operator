@@ -20,6 +20,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 
 #include <array>
+#include <bitset>
 #include <atomic>
 #include <deque>
 #include <functional>
@@ -37,6 +38,7 @@
 #include "state/sso_SynthOwnership.h"
 #include "state/sso_SynthController.h"
 #include "midi/sso_TestNotePlayer.h"
+#include "midi/sso_NoteForwarder.h"
 #include "library/sso_Preset.h"
 #include "library/sso_PresetLibrary.h"
 #include "state/sso_BankReader.h"

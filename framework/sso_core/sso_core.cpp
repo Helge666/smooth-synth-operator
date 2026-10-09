@@ -6,6 +6,7 @@
 #include "state/sso_SynthOwnership.cpp"
 #include "state/sso_SynthController.cpp"
 #include "midi/sso_TestNotePlayer.cpp"
+#include "midi/sso_NoteForwarder.cpp"
 #include "library/sso_Preset.cpp"
 #include "library/sso_PresetLibrary.cpp"
 #include "state/sso_BankReader.cpp"

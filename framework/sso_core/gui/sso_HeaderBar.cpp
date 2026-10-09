@@ -146,8 +146,24 @@ MidiSettingsPanel::MidiSettingsPanel (SynthController& c) : controller (c)
     };
     addChildComponent (resumeButton);
 
+    forwardToggle.setToggleState (controller.getForwardNotes(), juce::dontSendNotification);
+    forwardToggle.onClick = [this] { controller.setForwardNotes (forwardToggle.getToggleState()); };
+    forwardToggle.setColour (juce::ToggleButton::textColourId, theme::text);
+    forwardToggle.setColour (juce::ToggleButton::tickColourId, theme::yellow);
+    addAndMakeVisible (forwardToggle);
+
+    offsetSlider.setSliderStyle (juce::Slider::LinearHorizontal);
+    offsetSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 64, 22);
+    offsetSlider.setRange (-20.0, 100.0, 0.5);
+    offsetSlider.setTextValueSuffix (" ms");
+    offsetSlider.setValue (controller.getNoteOffsetMs(), juce::dontSendNotification);
+    offsetSlider.setDoubleClickReturnValue (true, 0.0);
+    offsetSlider.setTooltip ("Delays the notes sent to the synth so it plays in time with the other tracks");
+    offsetSlider.onValueChange = [this] { controller.setNoteOffsetMs (offsetSlider.getValue()); };
+    addAndMakeVisible (offsetSlider);
+
     fill();
-    setSize (420, 330);
+    setSize (420, 430);
 }
 
 void MidiSettingsPanel::fill()
@@ -193,6 +209,10 @@ void MidiSettingsPanel::paint (juce::Graphics& g)
         r.removeFromTop (32);
     }
 
+    r.removeFromTop (34);   // forward toggle
+    g.setColour (theme::textDim);
+    g.drawText ("NOTE TIMING OFFSET", r.removeFromTop (18), juce::Justification::bottomLeft);
+    r.removeFromTop (34);   // offset slider
     r.removeFromTop (8);
     auto loop = controller.getConnection().isLoopDetected();
     g.setColour (loop ? theme::red : theme::textDim);
@@ -215,6 +235,10 @@ void MidiSettingsPanel::resized()
         box->setBounds (r.removeFromTop (28));
         r.removeFromTop (4);
     }
+
+    forwardToggle.setBounds (r.removeFromTop (30).withTrimmedTop (4));
+    r.removeFromTop (22);
+    offsetSlider.setBounds (r.removeFromTop (30));
 
     resumeButton.setVisible (controller.getConnection().isLoopDetected());
     resumeButton.setBounds (r.removeFromBottom (32).removeFromLeft (160));

@@ -111,7 +111,7 @@ juce::String SynthController::getOwnershipKey() const
 
 void SynthController::ownershipChanged (bool isOwner, bool takenOver)
 {
-    auto wasActive = active;
+    auto wasActive = active.load();
     active = isOwner;
     sender.setMuted (! active);
 
@@ -322,6 +322,11 @@ void SynthController::setDeviceId (int id)
     deviceId = juce::jlimit (0, 15, id);
     settings->get().setValue (settingsKey ("deviceId"), deviceId.load());
 }
+
+bool SynthController::getForwardNotes() const          { return settings->get().getBoolValue (settingsKey ("forwardNotes"), true); }
+void SynthController::setForwardNotes (bool shouldForward) { settings->get().setValue (settingsKey ("forwardNotes"), shouldForward); sendChangeMessage(); }
+double SynthController::getNoteOffsetMs() const         { return settings->get().getDoubleValue (settingsKey ("noteOffsetMs"), 0.0); }
+void SynthController::setNoteOffsetMs (double ms)       { settings->get().setValue (settingsKey ("noteOffsetMs"), ms); sendChangeMessage(); }
 
 void SynthController::setMidiOutput (const juce::String& identifier)
 {
