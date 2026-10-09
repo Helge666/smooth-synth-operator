@@ -43,6 +43,8 @@ All CCs in the manual's table were verified to land in the expected byte, with t
 - **CC 25 DCO 2 wave**: order is Saw, Pulse, Square, Noise (0–31, 32–63, 64–95, 96–127);
   the manual lists Noise first.
 - CC 7 sets VCA level (0x3C) only.
+- **CC 123 All Notes Off is ignored** (a held note keeps sounding). **CC 120 All Sound Off works**
+  and silences everything immediately, including release tails. Use CC 120 as panic.
 - No CC exists for mod-wheel / aftertouch routing (0x45–0x4F), DCO env velocity (0x21 bits 4–5)
   and envelope speed (0x54) → SysEx 0E.
 

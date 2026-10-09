@@ -101,6 +101,48 @@ public:
 
             expect (toggled >= 1, "the selected chip is highlighted");
         }
+
+        beginTest ("Dialogs close on Save and Cancel");
+        {
+            sso::PresetBrowser browser (library, controller);
+            browser.setSize (330, 900);
+
+            auto findDialog = []() -> juce::AlertWindow*
+            {
+                for (int i = 0; i < juce::Desktop::getInstance().getNumComponents(); ++i)
+                    if (auto* w = dynamic_cast<juce::AlertWindow*> (juce::Desktop::getInstance().getComponent (i)))
+                        if (w->isVisible())
+                            return w;
+
+                return nullptr;
+            };
+
+            auto click = [] (juce::AlertWindow& w, const juce::String& text)
+            {
+                for (auto* child : w.getChildren())
+                    if (auto* b = dynamic_cast<juce::TextButton*> (child); b != nullptr && b->getButtonText() == text)
+                        b->triggerClick();
+
+                juce::MessageManager::getInstance()->runDispatchLoopUntil (50);
+            };
+
+            for (auto* buttonText : { "Cancel", "Save" })
+            {
+                auto before = (int) library.getPresets().size();
+                browser.saveAs();
+                juce::MessageManager::getInstance()->runDispatchLoopUntil (50);
+
+                auto* dialog = findDialog();
+                expect (dialog != nullptr, "save dialog shown");
+
+                if (dialog == nullptr)
+                    continue;
+
+                click (*dialog, buttonText);
+                expect (findDialog() == nullptr, juce::String ("dialog still open after ") + buttonText);
+                expectEquals ((int) library.getPresets().size(), before + (juce::String (buttonText) == "Save" ? 1 : 0));
+            }
+        }
     }
 };
 

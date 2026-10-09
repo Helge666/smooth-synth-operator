@@ -40,12 +40,16 @@ void TestNotePlayer::play (std::vector<Event> phrase)
 {
     stop();
 
+    // Silence release tails of earlier notes so the phrase starts on a quiet synth.
+    // (CC 120 All Sound Off - the Kiwi-3P ignores CC 123 All Notes Off, measured.)
+    controller.sendMidi (juce::MidiMessage::allSoundOff (controller.getMidiSettings().channel));
+
     {
         const juce::ScopedLock sl (lock);
         events = std::move (phrase);
         std::stable_sort (events.begin(), events.end(), [] (auto& a, auto& b) { return a.timeMs < b.timeMs; });
         next = 0;
-        startMs = juce::Time::getMillisecondCounterHiRes();
+        startMs = juce::Time::getMillisecondCounterHiRes() + startDelayMs;
         playing = true;
     }
 
@@ -65,6 +69,9 @@ void TestNotePlayer::stop()
 
         for (auto n : sounding)
             controller.sendMidi (juce::MidiMessage::noteOff (settings.channel, n));
+
+        if (wasPlaying)
+            controller.sendMidi (juce::MidiMessage::allSoundOff (settings.channel));
 
         sounding.clear();
     }

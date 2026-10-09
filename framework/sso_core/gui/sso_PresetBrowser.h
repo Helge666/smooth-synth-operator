@@ -45,6 +45,10 @@ private:
     void askForText (const juce::String& title, const juce::String& message, const juce::String& initial,
                      std::function<void (juce::String)> onOk);
 
+    /** Shows `dialog` modally; calls onResult with the button's return value, then closes it. */
+    void showDialog (std::function<void (int)> onResult);
+    void closeDialog();
+
     PresetLibrary& library;
     SynthController& controller;
 

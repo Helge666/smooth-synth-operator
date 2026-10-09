@@ -322,13 +322,36 @@ void PresetBrowser::askForText (const juce::String& title, const juce::String& m
     dialog->addButton ("OK", 1, juce::KeyPress (juce::KeyPress::returnKey));
     dialog->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
 
-    dialog->enterModalState (true, juce::ModalCallbackFunction::create ([this, onOk] (int result)
+    showDialog ([this, onOk] (int result)
     {
         auto text = dialog->getTextEditorContents ("text").trim();
 
         if (result == 1 && text.isNotEmpty())
             onOk (text);
+    });
+}
+
+void PresetBrowser::showDialog (std::function<void (int)> onResult)
+{
+    dialog->enterModalState (true, juce::ModalCallbackFunction::create ([this, onResult] (int result)
+    {
+        onResult (result);
+        closeDialog();
     }), false);
+}
+
+void PresetBrowser::closeDialog()
+{
+    if (dialog == nullptr)
+        return;
+
+    // The window stays on screen unless hidden; delete it after the modal callback has returned.
+    dialog->setVisible (false);
+    juce::MessageManager::callAsync ([safe = juce::Component::SafePointer<PresetBrowser> (this), shown = dialog.get()]
+    {
+        if (safe != nullptr && safe->dialog.get() == shown)
+            safe->dialog.reset();
+    });
 }
 
 void PresetBrowser::renameCurrent()
@@ -378,7 +401,7 @@ void PresetBrowser::saveAs()
     dialog->addButton ("Save", 1, juce::KeyPress (juce::KeyPress::returnKey));
     dialog->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
 
-    dialog->enterModalState (true, juce::ModalCallbackFunction::create ([this] (int result)
+    showDialog ([this] (int result)
     {
         if (result != 1)
             return;
@@ -401,7 +424,7 @@ void PresetBrowser::saveAs()
             controller.setPatchName (p.name);
             controller.setPresetRef ({ file, bank, p.category });
         }
-    }), false);
+    });
 }
 
 void PresetBrowser::importSyx()
