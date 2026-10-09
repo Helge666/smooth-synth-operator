@@ -3,7 +3,7 @@
 Kiwi3PEditor::Content::Content (Kiwi3PProcessor& p)
     : browser (p.library, p.controller),
       header (p.controller, "Kiwi-3P Programmer"),
-      panel (p.controller, p.parameters)
+      panel (p.controller, p.parameters, *p.generator)
 {
     addAndMakeVisible (browser);
     addAndMakeVisible (header);

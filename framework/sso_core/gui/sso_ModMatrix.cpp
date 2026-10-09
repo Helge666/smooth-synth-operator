@@ -126,14 +126,14 @@ void ModMatrix::paint (juce::Graphics& g)
     header.removeFromLeft (sourceWidth + depthWidth + 8);
     auto cellWidth = (float) header.getWidth() / (float) def.destinations.size();
 
-    g.setFont (theme::label (12.0f));
+    g.setFont (theme::label (11.0f));
     g.setColour (theme::textDim);
     g.drawText ("DEPTH", r.getX() + sourceWidth, header.getY(), depthWidth, 20, juce::Justification::centredLeft);
 
     for (int c = 0; c < def.destinations.size(); ++c)
         g.drawFittedText (def.destinations[c], juce::Rectangle<float> ((float) header.getX() + (float) c * cellWidth, (float) header.getY(),
                                                                        cellWidth, 20.0f).toNearestInt(),
-                          juce::Justification::centred, 1, 0.7f);
+                          juce::Justification::centred, 1, 0.6f);
 
     g.setColour (theme::text);
     g.setFont (theme::label (14.0f, true));

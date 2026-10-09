@@ -82,8 +82,8 @@ void LcdDisplay::paint (juce::Graphics& g)
     g.drawText (name.isEmpty() ? juce::String ("(NO NAME)") : name, top, juce::Justification::centredLeft);
 
     juce::String right;
-    if (ref.file != juce::File())
-        right = (ref.bank + " / " + ref.category).toUpperCase();
+    if (ref.bank.isNotEmpty())
+        right = (ref.category.isNotEmpty() ? ref.bank + " / " + ref.category : ref.bank).toUpperCase();
 
     g.setFont (theme::lcd (18.0f));
     g.setColour (theme::lcdDim);

@@ -5,6 +5,7 @@
     sso-cli import <file.syx> --bank <name> [--slots A-1:B-16] [--skip-generic]
                               [--author <name>] [--root <library dir>]
     sso-cli list [--bank <name>] [--root <library dir>]
+    sso-cli generate <category|all> --count <n> --out <file.syx> [--seed <n>]
 */
 
 namespace
@@ -28,7 +29,8 @@ namespace
     {
         std::cout << "usage:\n"
                      "  sso-cli import <file.syx> --bank <name> [--slots A-1:B-16] [--skip-generic] [--author <name>] [--root <dir>]\n"
-                     "  sso-cli list [--bank <name>] [--root <dir>]\n";
+                     "  sso-cli list [--bank <name>] [--root <dir>]\n"
+                     "  sso-cli generate <category|all> --count <n> --out <file.syx> [--seed <n>]\n";
         return 2;
     }
 }
@@ -57,6 +59,35 @@ int main (int argc, char* argv[])
         }
 
         std::cout << library.getPresets().size() << " presets in " << library.getRoot().getFullPathName() << std::endl;
+        return 0;
+    }
+
+    if (args[0] == "generate" && args.size() >= 2)
+    {
+        auto generator = sso::kiwi3p::createGenerator (device);
+        auto categories = args[1] == "all" ? generator->getCategories() : juce::StringArray { args[1] };
+        auto count = juce::jmax (1, option (args, "--count", "1").getIntValue());
+        juce::Random random (option (args, "--seed", juce::String (juce::Time::currentTimeMillis())).getLargeIntValue());
+        juce::File out (option (args, "--out"));
+
+        if (out == juce::File() || ! generator->getCategories().contains (categories[0]))
+            return usage();
+
+        juce::MemoryOutputStream syx;
+
+        for (auto& category : categories)
+        {
+            for (int i = 0; i < count; ++i)
+            {
+                auto patch = generator->generate (category, device.createInitPatch(), {}, random);
+                auto m = device.createEditBufferDump ({}, patch);
+                syx.write (m.getRawData(), (size_t) m.getRawDataSize());
+                std::cout << category << ": " << device.getPatchName (patch) << "\n";
+            }
+        }
+
+        out.replaceWithData (syx.getData(), syx.getDataSize());
+        std::cout << "wrote " << out.getFullPathName() << std::endl;
         return 0;
     }
 

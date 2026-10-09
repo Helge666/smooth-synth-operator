@@ -76,7 +76,7 @@ namespace
         sso::ModMatrixDef def;
         def.title = "Modulation";
         def.accent = theme::blue;
-        def.destinations = { "PITCH", "D-LFO", "D-ENV", "MIX", "F-LFO", "F-ENV", "CUT", "RES", "HPF", "VCA", "A-LFO", "LFO RT", "CHOR" };
+        def.destinations = { "PITCH", "D-LFO", "D-ENV", "MIX", "F-LFO", "F-ENV", "CUT", "RES", "HPF", "VCA", "A-LFO", "RATE", "CHOR" };
         def.rows = {
             { "BENDER", {}, { "bend_dco", "", "", "bend_mix", "", "", "bend_cutoff", "", "", "bend_vca", "", "bend_lfo", "" } },
             { "WHEEL/LFO", "mw_depth", routing ("mw") },
@@ -87,42 +87,8 @@ namespace
 }
 
 //==============================================================================
-struct Kiwi3PPanel::GeneratorSection final : public juce::Component
-{
-    GeneratorSection()
-    {
-        for (auto* name : { "BASS", "POLY", "PADS", "FX", "KEYS", "STRINGS", "BELLS", "BRASS" })
-        {
-            auto* b = buttons.add (new juce::TextButton (name));
-            b->setEnabled (false);
-            b->setTooltip ("Sound generator - coming next");
-            addAndMakeVisible (b);
-        }
-    }
-
-    void paint (juce::Graphics& g) override
-    {
-        sso::paintSectionFrame (g, getLocalBounds(), "Generator", theme::yellow);
-        g.setColour (theme::textDim);
-        g.setFont (theme::label (13.0f));
-        g.drawText ("Coming next: random sounds by category, keep sections, variations",
-                    getLocalBounds().reduced (12, 10).removeFromBottom (20), juce::Justification::centredLeft);
-    }
-
-    void resized() override
-    {
-        auto r = getLocalBounds().withTrimmedTop (sso::SectionPanel::titleHeight).reduced (12, 0);
-        auto w = r.getWidth() / 4;
-
-        for (int i = 0; i < buttons.size(); ++i)
-            buttons[i]->setBounds (r.getX() + (i % 4) * w, r.getY() + (i / 4) * 34, w - 4, 30);
-    }
-
-    juce::OwnedArray<juce::TextButton> buttons;
-};
-
-//==============================================================================
-Kiwi3PPanel::Kiwi3PPanel (sso::SynthController& controller, juce::AudioProcessorValueTreeState& state)
+Kiwi3PPanel::Kiwi3PPanel (sso::SynthController& controller, juce::AudioProcessorValueTreeState& state,
+                          sso::PatchGenerator& patchGenerator)
 {
     for (auto& def : firstRow())
         addAndMakeVisible (*row1.emplace_back (std::make_unique<sso::SectionPanel> (def, controller, state)));
@@ -133,13 +99,13 @@ Kiwi3PPanel::Kiwi3PPanel (sso::SynthController& controller, juce::AudioProcessor
     matrix = std::make_unique<sso::ModMatrix> (matrixDef(), controller, state);
     addAndMakeVisible (*matrix);
 
-    Def voiceDef { "Voice", theme::cream, 1.0f, 170,
+    Def voiceDef { "Voice", theme::cream, 1.0f, 150,
                    { { "detune", "DETUNE" }, { "portamento", "PORTA" }, { "load_seq", "SEQ" }, { "load_pattern", "PATT" } },
                    { { "voice_mode", "ASSIGN", { "POLY1", "POLY2", "UNI1", "UNI2", "MONO1", "MONO2" } } } };
     voice = std::make_unique<sso::SectionPanel> (voiceDef, controller, state);
     addAndMakeVisible (*voice);
 
-    generator = std::make_unique<GeneratorSection>();
+    generator = std::make_unique<sso::GeneratorPanel> (patchGenerator, controller);
     addAndMakeVisible (*generator);
 }
 
@@ -195,5 +161,5 @@ void Kiwi3PPanel::resized()
     r.removeFromTop (12);
 
     layoutRow ({ matrix.get(), voice.get(), generator.get() }, { 1.0f, 0.0f, 0.0f },
-               { 600, voice->getPreferredWidth(), 330 }, r);
+               { 600, voice->getPreferredWidth(), 380 }, r);
 }

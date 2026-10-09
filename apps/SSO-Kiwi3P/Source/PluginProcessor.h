@@ -35,6 +35,7 @@ public:
     juce::AudioProcessorValueTreeState parameters;
     sso::SynthController controller;
     sso::PresetLibrary library { device };
+    std::unique_ptr<sso::PatchGenerator> generator = sso::kiwi3p::createGenerator (device);
 
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Kiwi3PProcessor)

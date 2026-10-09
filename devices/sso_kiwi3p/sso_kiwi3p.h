@@ -20,3 +20,4 @@
 #include <sso_core/sso_core.h>
 
 #include "Kiwi3PDevice.h"
+#include "Kiwi3PGenerator.h"

@@ -22,6 +22,7 @@
 #include <atomic>
 #include <deque>
 #include <functional>
+#include <map>
 #include <optional>
 #include <vector>
 
@@ -35,6 +36,7 @@
 #include "library/sso_Preset.h"
 #include "library/sso_PresetLibrary.h"
 #include "state/sso_BankReader.h"
+#include "generator/sso_PatchGenerator.h"
 #include "gui/sso_Theme.h"
 #include "gui/sso_LookAndFeel.h"
 #include "gui/sso_Widgets.h"
@@ -42,4 +44,5 @@
 #include "gui/sso_HeaderBar.h"
 #include "gui/sso_SynthMemoryPanel.h"
 #include "gui/sso_PresetBrowser.h"
+#include "gui/sso_GeneratorPanel.h"
 #include "gui/sso_GenericParamPanel.h"
