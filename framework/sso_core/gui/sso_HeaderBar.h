@@ -65,6 +65,9 @@ public:
 
     LcdDisplay& getDisplay() noexcept { return display; }
 
+    /** Plays/stops the test phrase (TEST button, space key in the standalone app). */
+    void toggleTestNotes();
+
 private:
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
     void timerCallback() override;
@@ -72,8 +75,9 @@ private:
     SynthController& controller;
     juce::String productLine;
     LcdDisplay display;
-    juce::TextButton browserButton { "BROWSER" }, getButton { "GET" }, sendButton { "SEND" },
+    juce::TextButton browserButton { "BROWSER" }, testButton { "TEST" }, getButton { "GET" }, sendButton { "SEND" },
                      freezeButton { "FREEZE" }, midiButton { "MIDI" };
+    TestNotePlayer testPlayer;
     uint32_t lastSent = 0, lastReceived = 0;
     int txFlash = 0, rxFlash = 0;
 };

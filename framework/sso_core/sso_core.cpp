@@ -4,6 +4,7 @@
 #include "midi/sso_MidiConnection.cpp"
 #include "midi/sso_ParameterSender.cpp"
 #include "state/sso_SynthController.cpp"
+#include "midi/sso_TestNotePlayer.cpp"
 #include "library/sso_Preset.cpp"
 #include "library/sso_PresetLibrary.cpp"
 #include "state/sso_BankReader.cpp"

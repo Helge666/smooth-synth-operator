@@ -12,6 +12,7 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    bool keyPressed (const juce::KeyPress&) override;
 
     static constexpr int browserWidth = 330;
     static constexpr int consoleWidth = 1520;
@@ -33,6 +34,8 @@ private:
     int designWidth() const noexcept { return content.browserVisible ? browserWidth + consoleWidth : consoleWidth; }
     void setBrowserVisible (bool);
     void updateAspect();
+
+    bool isStandalone() const noexcept;
 
     sso::LookAndFeel lookAndFeel;
     juce::SharedResourcePointer<sso::AppSettings> settings;

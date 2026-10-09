@@ -56,6 +56,9 @@ public:
     void writeToSlot (int slot);
     void writePatchToSlot (const Patch&, int slot);
 
+    /** Sends a message (e.g. notes) to the synth, in order with all other output. Any thread. */
+    void sendMidi (const juce::MidiMessage&);
+
     /** Asks the synth for a stored sound. The answer arrives via onSlotReceived; it does
         not change the current sound in the editor (but the synth's edit buffer). */
     void requestSlot (int slot);

@@ -140,8 +140,8 @@ Kiwi3PDevice::Kiwi3PDevice()
 
     // VCA --------------------------------------------------------------------------
     // Stored as flags: bit0 = gate (overrides), bit1 = ENV 2.
-    p.push_back (choice ("vca_mode", "Mode", "VCA", 0x3e, 0, 2, { "Gate", "ENV 1", "ENV 2" }, 61, cc3, 1, { 1, 0, 2 }));
-    p.push_back (continuous ("vca_level", "Level", "VCA", 0x3c, 7, 100));
+    p.push_back (choice ("vca_mode", "Mode", "VCA", 0x3e, 0, 2, { "Gate", "ENV 1", "ENV 2" }, 61, cc3, 2, { 1, 0, 2 }));
+    p.push_back (continuous ("vca_level", "Level", "VCA", 0x3c, 7, 62));      // init as loud as the factory sounds
     p.push_back (continuous ("vca_lfo", "LFO Mod", "VCA", 0x3d, 59, 0));
     p.push_back (choice ("vca_lfo_src", "LFO Src", "VCA", 0x3e, 2, 1, { "LFO 1", "LFO 2" }, 60, cc2));
 

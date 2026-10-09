@@ -2,6 +2,7 @@
 
 int runHardwareTest (const juce::String& portName);
 int runSnapshot (const juce::StringArray& args);
+int runPlayTest (const juce::String& portName);
 
 struct ConsoleLogger final : public juce::Logger
 {
@@ -15,6 +16,9 @@ int main (int argc, char* argv[])
     juce::Logger::setCurrentLogger (&logger);
     const juce::ScopeGuard resetLogger { [] { juce::Logger::setCurrentLogger (nullptr); } };
     juce::StringArray args (argv + 1, argc - 1);
+
+    if (args.contains ("--play-test"))
+        return runPlayTest (args[args.indexOf ("--play-test") + 1]);
 
     if (args.contains ("--snapshot"))
         return runSnapshot (args);

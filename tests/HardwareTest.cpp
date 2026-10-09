@@ -39,6 +39,27 @@ namespace
     }
 }
 
+/** Plays the TEST phrase once through SynthController (SSO_Tests --play-test "<port part>"). */
+int runPlayTest (const juce::String& portPart)
+{
+    sso::kiwi3p::Kiwi3PDevice device;
+    DummyProcessor processor;
+    juce::AudioProcessorValueTreeState state (processor, nullptr, "test", sso::SynthController::createParameterLayout (device));
+    sso::SynthController controller (device, state);
+    controller.setMidiOutput (findPort (juce::MidiOutput::getAvailableDevices(), portPart));
+
+    sso::TestNotePlayer player (controller);
+    player.play();
+    auto start = juce::Time::getMillisecondCounterHiRes();
+
+    while (player.isPlaying() && juce::Time::getMillisecondCounterHiRes() - start < 15000)
+        pump (50);
+
+    pump (200);
+    std::cout << "played test phrase in " << juce::roundToInt (juce::Time::getMillisecondCounterHiRes() - start) << " ms" << std::endl;
+    return player.isPlaying() ? 1 : 0;
+}
+
 int runHardwareTest (const juce::String& portPart)
 {
     sso::kiwi3p::Kiwi3PDevice device;

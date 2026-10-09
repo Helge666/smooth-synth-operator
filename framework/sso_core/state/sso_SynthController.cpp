@@ -199,6 +199,11 @@ void SynthController::writePatchToSlot (const Patch& patch, int slot)
     sender.enqueue (device.createSlotDump (getMidiSettings(), patch, slot));
 }
 
+void SynthController::sendMidi (const juce::MidiMessage& m)
+{
+    sender.enqueue (m);
+}
+
 void SynthController::requestSlot (int slot)
 {
     sender.enqueue (device.createSlotRequest (getMidiSettings(), slot));

@@ -33,6 +33,7 @@
 #include "midi/sso_ParameterSender.h"
 #include "state/sso_AppSettings.h"
 #include "state/sso_SynthController.h"
+#include "midi/sso_TestNotePlayer.h"
 #include "library/sso_Preset.h"
 #include "library/sso_PresetLibrary.h"
 #include "state/sso_BankReader.h"

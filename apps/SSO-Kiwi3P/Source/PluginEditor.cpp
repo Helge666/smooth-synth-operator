@@ -56,6 +56,33 @@ Kiwi3PEditor::Kiwi3PEditor (Kiwi3PProcessor& p)
     setResizable (true, true);
     updateAspect();
     setSize (juce::roundToInt (designWidth() * scale), juce::roundToInt (designHeight * scale));
+
+    // Space plays the test phrase - only in the standalone app; in a DAW it is the transport key.
+    if (isStandalone())
+    {
+        setWantsKeyboardFocus (true);
+        juce::MessageManager::callAsync ([safe = juce::Component::SafePointer<Kiwi3PEditor> (this)]
+        {
+            if (safe != nullptr && safe->isShowing())
+                safe->grabKeyboardFocus();
+        });
+    }
+}
+
+bool Kiwi3PEditor::isStandalone() const noexcept
+{
+    return processor.wrapperType == juce::AudioProcessor::wrapperType_Standalone;
+}
+
+bool Kiwi3PEditor::keyPressed (const juce::KeyPress& key)
+{
+    if (isStandalone() && key == juce::KeyPress::spaceKey)
+    {
+        content.header.toggleTestNotes();
+        return true;
+    }
+
+    return false;
 }
 
 Kiwi3PEditor::~Kiwi3PEditor()

@@ -194,8 +194,13 @@ void MidiSettingsPanel::resized()
 
 //==============================================================================
 HeaderBar::HeaderBar (SynthController& c, const juce::String& line)
-    : controller (c), productLine (line), display (c)
+    : controller (c), productLine (line), display (c), testPlayer (c)
 {
+    testButton.setColour (juce::TextButton::buttonOnColourId, theme::lcdText);
+    testButton.setTooltip ("Play a test phrase: four Cs, the C major scale and a chord");
+    testButton.onClick = [this] { toggleTestNotes(); };
+    testPlayer.onStateChanged = [this] (bool playing) { testButton.setToggleState (playing, juce::dontSendNotification); };
+
     browserButton.setClickingTogglesState (true);
     browserButton.onClick = [this]
     {
@@ -220,7 +225,7 @@ HeaderBar::HeaderBar (SynthController& c, const juce::String& line)
                                                 midiButton.getScreenBounds(), nullptr);
     };
 
-    for (auto* b : { &browserButton, &getButton, &sendButton, &freezeButton, &midiButton })
+    for (auto* b : { &browserButton, &testButton, &getButton, &sendButton, &freezeButton, &midiButton })
         addAndMakeVisible (b);
 
     addAndMakeVisible (display);
@@ -231,6 +236,14 @@ HeaderBar::HeaderBar (SynthController& c, const juce::String& line)
 HeaderBar::~HeaderBar()
 {
     controller.removeChangeListener (this);
+}
+
+void HeaderBar::toggleTestNotes()
+{
+    if (testPlayer.isPlaying())
+        testPlayer.stop();
+    else
+        testPlayer.play();
 }
 
 void HeaderBar::setBrowserVisible (bool visible)
@@ -293,8 +306,8 @@ void HeaderBar::resized()
     r.removeFromLeft (210);
     r.removeFromRight (56);
 
-    auto buttons = r.removeFromRight (5 * 96);
-    for (auto* b : { &browserButton, &getButton, &sendButton, &freezeButton, &midiButton })
+    auto buttons = r.removeFromRight (6 * 96);
+    for (auto* b : { &browserButton, &testButton, &getButton, &sendButton, &freezeButton, &midiButton })
         b->setBounds (buttons.removeFromLeft (96).reduced (4, 0).withSizeKeepingCentre (88, 46));
 
     display.setBounds (r.reduced (10, 4));
