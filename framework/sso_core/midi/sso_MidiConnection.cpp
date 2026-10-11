@@ -176,6 +176,12 @@ void MidiConnection::send (const juce::MidiMessage& m)
 
 void MidiConnection::processIncoming (const juce::MidiMessage& m)
 {
+    lastHeardMs = juce::Time::getMillisecondCounterHiRes();
+
+    // Clock, active sensing and other real-time bytes only tell us the synth is there
+    if (m.getRawDataSize() == 1 && *m.getRawData() >= 0xf8)
+        return;
+
     ++numReceived;
 
     if (isEchoOfSent (m))

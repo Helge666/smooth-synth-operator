@@ -67,3 +67,31 @@ public:
 };
 
 static MidiLoopTests midiLoopTests;
+
+//==============================================================================
+class MidiActivityTests final : public juce::UnitTest
+{
+public:
+    MidiActivityTests() : juce::UnitTest ("MIDI activity", "SSO") {}
+
+    void runTest() override
+    {
+        beginTest ("Clock and active sensing count as 'heard', not as received data");
+        sso::MidiConnection connection;
+        int delivered = 0;
+        connection.onMessageReceived = [&delivered] (const juce::MidiMessage&) { ++delivered; };
+
+        auto before = connection.getLastHeardMs();
+        connection.processIncoming (juce::MidiMessage::midiClock());
+        connection.processIncoming (juce::MidiMessage (0xfe));
+        expectEquals ((int) connection.getNumReceived(), 0);
+        expectEquals (delivered, 0);
+        expect (connection.getLastHeardMs() > before);
+
+        connection.processIncoming (juce::MidiMessage::noteOn (1, 60, (juce::uint8) 100));
+        expectEquals ((int) connection.getNumReceived(), 1);
+        expectEquals (delivered, 1);
+    }
+};
+
+static MidiActivityTests midiActivityTests;

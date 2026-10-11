@@ -52,6 +52,9 @@ juce::String LcdDisplay::statusLine() const
     if (! conn.isOutputOpen())
         return "NO MIDI OUTPUT - CLICK MIDI TO SET UP";
 
+    if (controller.getPresence() == SynthController::Presence::absent)
+        return "NO ANSWER FROM THE SYNTH - CHECK POWER, CABLES AND MIDI PORTS";
+
     juce::String sync;
 
     switch (controller.getSyncState())
@@ -101,7 +104,9 @@ void LcdDisplay::paint (juce::Graphics& g)
     }
     else
     {
-        g.setColour (controller.getConnection().isLoopDetected() ? theme::red : theme::lcdDim);
+        auto problem = controller.getConnection().isLoopDetected()
+                        || controller.getPresence() == SynthController::Presence::absent;
+        g.setColour (problem ? theme::red : theme::lcdDim);
         g.drawText (statusLine(), inner, juce::Justification::centredLeft);
     }
 }
@@ -332,7 +337,7 @@ void HeaderBar::timerCallback()
     {
         txFlash = juce::jmax (0, txFlash - 1);
         rxFlash = juce::jmax (0, rxFlash - 1);
-        repaint (getLocalBounds().removeFromRight (60));
+        repaint (getLocalBounds().removeFromRight (62));
     }
 }
 
@@ -348,7 +353,7 @@ void HeaderBar::paint (juce::Graphics& g)
     g.setFont (theme::label (13.0f).withExtraKerningFactor (0.2f));
     g.drawText (productLine.toUpperCase(), logo, juce::Justification::topLeft);
 
-    auto leds = getLocalBounds().removeFromRight (50).withSizeKeepingCentre (50, 44);
+    auto leds = getLocalBounds().removeFromRight (56).withSizeKeepingCentre (56, 60);
     auto led = [&g] (juce::Rectangle<int> area, bool on, juce::Colour c, const char* text)
     {
         auto dot = area.removeFromLeft (14).withSizeKeepingCentre (9, 9).toFloat();
@@ -359,7 +364,10 @@ void HeaderBar::paint (juce::Graphics& g)
         g.drawText (text, area.withTrimmedLeft (4), juce::Justification::centredLeft);
     };
 
-    led (leds.removeFromTop (22), txFlash > 0, theme::orange, "TX");
+    auto presence = controller.getPresence();
+    led (leds.removeFromTop (20), presence != SynthController::Presence::unknown,
+         presence == SynthController::Presence::present ? juce::Colour (0xff4cc35a) : theme::red, "SYNTH");
+    led (leds.removeFromTop (20), txFlash > 0, theme::orange, "TX");
     led (leds, rxFlash > 0, theme::lcdText, "RX");
 }
 
@@ -367,7 +375,7 @@ void HeaderBar::resized()
 {
     auto r = getLocalBounds();
     r.removeFromLeft (210);
-    r.removeFromRight (56);
+    r.removeFromRight (62);
 
     std::vector<juce::TextButton*> visibleButtons { &browserButton, &testButton, &getButton, &sendButton, &freezeButton, &midiButton };
 

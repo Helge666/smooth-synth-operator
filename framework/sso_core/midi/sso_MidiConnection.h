@@ -32,7 +32,12 @@ public:
     std::function<void()> onStateChanged;
 
     uint32_t getNumSent() const noexcept      { return numSent.load(); }
+
+    /** Messages received, without real-time messages (clock, active sensing, ...). */
     uint32_t getNumReceived() const noexcept  { return numReceived.load(); }
+
+    /** When anything (also clock or active sensing) last arrived; Time::getMillisecondCounterHiRes. */
+    double getLastHeardMs() const noexcept    { return lastHeardMs.load(); }
 
     //==============================================================================
     /** MIDI loop protection: if messages we sent come back on our input, something routes
@@ -64,6 +69,7 @@ private:
     std::unique_ptr<juce::MidiInput> input;
     juce::String wantedOutput, wantedInput;
     std::atomic<uint32_t> numSent { 0 }, numReceived { 0 };
+    std::atomic<double> lastHeardMs { -1.0e9 };
 
     struct SentMessage { uint64_t hash = 0; double timeMs = -1.0e9; };
     std::array<SentMessage, 64> recentlySent;

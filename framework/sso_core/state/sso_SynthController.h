@@ -15,6 +15,7 @@ namespace sso
 */
 class SynthController : private juce::AudioProcessorValueTreeState::Listener,
                         private OwnershipRegistry::Member,
+                        private juce::Timer,
                         public juce::ChangeBroadcaster
 {
 public:
@@ -114,6 +115,11 @@ public:
     /** How other instances see this one, e.g. "Cubase - track Pad". */
     void setInstanceDescription (const juce::String&);
 
+    /** Whether the synth answers: heard from recently (any message, also clock), or asked
+        and silent. Asked with a short read-only request on connect and after 10 s of silence. */
+    enum class Presence { unknown, present, absent };
+    Presence getPresence() const;
+
     enum class SyncState { unknown, waitingForSynth, inSync, edited };
     SyncState getSyncState() const noexcept { return syncState; }
     juce::Time getLastReceiveTime() const noexcept { return lastReceive; }
@@ -130,6 +136,8 @@ private:
     void connectionChanged();
     void sendPendingSoundIfPossible();
     void sendGlobalsIfDue();
+    void timerCallback() override;
+    void probeSynth();
     void storeGlobals();
 
     void parameterChanged (const juce::String& parameterID, float newValue) override;
@@ -160,6 +168,8 @@ private:
     bool pendingSend = false;           // a restored sound still has to go to the synth
     std::vector<int> globalValues;
     juce::String globalsSentTo;         // output the globals were last sent to (empty = not sent)
+    bool globalsRequested = false;      // the next global dump replaces the stored values
+    double probeSentMs = 0;             // 0 = no probe outstanding
     bool registered = false;
     juce::String registeredKey;
     juce::String description { "SSO" };

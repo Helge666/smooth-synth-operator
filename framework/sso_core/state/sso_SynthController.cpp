@@ -99,10 +99,12 @@ SynthController::SynthController (const DeviceDefinition& d, juce::AudioProcesso
     registeredKey = getOwnershipKey();
     registered = true;
     registry->add (*this);
+    startTimer (1000);
 }
 
 SynthController::~SynthController()
 {
+    stopTimer();
     registry->remove (*this);
 
     connection.onMessageReceived = nullptr;
@@ -227,7 +229,57 @@ void SynthController::setSendGlobalsOnConnect (bool shouldSend)
 void SynthController::requestGlobalsFromSynth()
 {
     if (active && ! device.getGlobalParams().empty())
+    {
+        globalsRequested = true;
         sender.enqueue (device.createGlobalsRequest (getMidiSettings()));
+    }
+}
+
+//==============================================================================
+static constexpr double quietBeforeProbeMs = 10000.0, probeTimeoutMs = 1500.0;
+
+void SynthController::probeSynth()
+{
+    // A harmless read-only request; any answer marks the synth as present
+    auto probe = device.createGlobalsRequest (getMidiSettings());
+
+    if (probe.getRawDataSize() == 0 || ! active || ! connection.isOutputOpen() || ! connection.isInputOpen())
+        return;
+
+    probeSentMs = juce::Time::getMillisecondCounterHiRes();
+    sender.enqueue (probe);
+}
+
+void SynthController::timerCallback()
+{
+    auto before = getPresence();
+    auto now = juce::Time::getMillisecondCounterHiRes();
+    auto heard = connection.getLastHeardMs();
+
+    if (probeSentMs > 0 && heard >= probeSentMs)
+        probeSentMs = 0;                                    // answered
+
+    if (probeSentMs == 0 && now - heard > quietBeforeProbeMs)
+        probeSynth();
+
+    if (getPresence() != before)
+        sendChangeMessage();
+}
+
+SynthController::Presence SynthController::getPresence() const
+{
+    if (! connection.isOutputOpen() || ! connection.isInputOpen() || ! active)
+        return Presence::unknown;
+
+    auto now = juce::Time::getMillisecondCounterHiRes();
+
+    if (now - connection.getLastHeardMs() < quietBeforeProbeMs + probeTimeoutMs)
+        return Presence::present;
+
+    if (probeSentMs > 0 && now - probeSentMs > probeTimeoutMs)
+        return Presence::absent;
+
+    return Presence::unknown;
 }
 
 void SynthController::setInstanceDescription (const juce::String& d)
@@ -435,6 +487,9 @@ void SynthController::handleIncomingMessage (const juce::MidiMessage& m)
 
     if (auto globals = device.parseGlobalsDump (getMidiSettings(), m))
     {
+        if (! std::exchange (globalsRequested, false))
+            return;     // answer to a presence probe
+
         for (size_t i = 0; i < globalValues.size(); ++i)
             globalValues[i] = device.getGlobalValue (*globals, (int) i);
 
