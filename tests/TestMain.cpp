@@ -2,6 +2,7 @@
 
 int runHardwareTest (const juce::String& portName);
 int runSnapshot (const juce::StringArray& args);
+int runClickMemoryTest();
 int runPlayTest (const juce::String& portName);
 int runHoldSynth (const juce::String& port);
 int runVst3StateTest (const juce::StringArray& args);
@@ -31,6 +32,9 @@ int main (int argc, char* argv[])
 
     if (args.contains ("--play-test"))
         return runPlayTest (args[args.indexOf ("--play-test") + 1]);
+
+    if (args.contains ("--click-memory"))
+        return runClickMemoryTest();
 
     if (args.contains ("--snapshot"))
         return runSnapshot (args);

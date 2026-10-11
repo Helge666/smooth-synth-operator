@@ -65,6 +65,54 @@ namespace
     }
 }
 
+/** Opens the KiwiSix editor in a window and folds/unfolds the synth memory with its SHOW/HIDE
+    button, checking that the browser re-lays out. Usage: SSO_Tests --click-memory */
+int runClickMemoryTest()
+{
+    KiwiSixProcessor processor;
+    std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+    editor->addToDesktop (juce::ComponentPeer::windowHasTitleBar);
+    editor->setVisible (true);
+    juce::MessageManager::getInstance()->runDispatchLoopUntil (300);
+
+    sso::SynthMemoryPanel* memory = nullptr;
+    std::function<void (juce::Component&)> find = [&] (juce::Component& c)
+    {
+        for (auto* child : c.getChildren())
+        {
+            if (auto* m = dynamic_cast<sso::SynthMemoryPanel*> (child))
+                memory = m;
+            else
+                find (*child);
+        }
+    };
+    find (*editor);
+
+    juce::TextButton* fold = nullptr;
+    for (auto* child : memory != nullptr ? memory->getChildren() : juce::Array<juce::Component*>())
+        if (auto* b = dynamic_cast<juce::TextButton*> (child); b != nullptr && (b->getButtonText() == "SHOW" || b->getButtonText() == "HIDE"))
+            fold = b;
+
+    if (fold == nullptr)
+        return 1;
+
+    auto wasOpen = memory->isOpen();
+    auto ok = true;
+
+    for (int i = 0; i < 2; ++i)
+    {
+        auto before = memory->isOpen();
+        fold->triggerClick();
+        juce::MessageManager::getInstance()->runDispatchLoopUntil (100);
+        std::cout << "open " << memory->isOpen() << ", height " << memory->getHeight() << ", button " << fold->getButtonText() << std::endl;
+        ok = ok && memory->isOpen() != before && memory->getHeight() == memory->getPreferredHeight();
+    }
+
+    memory->setOpen (wasOpen);
+    std::cout << (ok ? "fold OK" : "fold FAILED") << std::endl;
+    return ok ? 0 : 1;
+}
+
 /** Renders a plugin editor offscreen to a PNG - for reviewing the GUI without a host.
     Usage: SSO_Tests --snapshot out.png [--device kiwi3p|kiwisix] [--no-browser] [--inactive] [--scale 1.0] */
 int runSnapshot (const juce::StringArray& args)

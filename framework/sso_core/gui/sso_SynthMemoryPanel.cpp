@@ -16,9 +16,14 @@ SynthMemoryPanel::SynthMemoryPanel (PresetLibrary& lib, SynthController& c)
 
     setTooltip ("Click: load into editor. Drop a sound from the list to store it in the synth.");
 
+    foldButton.setTooltip ("Show or hide the synth's memory");
+    foldButton.onClick = [this] { setOpen (! open); };
+    addAndMakeVisible (foldButton);
+
     open = settings->get().getBoolValue (controller.getDevice().getDeviceId() + ".memoryOpen", false);
     readButton.setVisible (open);
     importButton.setVisible (open);
+    foldButton.setButtonText (open ? "HIDE" : "SHOW");
 }
 
 void SynthMemoryPanel::setOpen (bool shouldBeOpen)
@@ -30,6 +35,7 @@ void SynthMemoryPanel::setOpen (bool shouldBeOpen)
     settings->get().setValue (controller.getDevice().getDeviceId() + ".memoryOpen", open);
     readButton.setVisible (open);
     importButton.setVisible (open);
+    foldButton.setButtonText (open ? "HIDE" : "SHOW");
     repaint();
 
     if (onOpenChanged != nullptr)
@@ -98,21 +104,6 @@ void SynthMemoryPanel::paint (juce::Graphics& g)
     paintSectionFrame (g, getLocalBounds(), "Synth memory", theme::orange);
     auto& device = controller.getDevice();
 
-    // fold / unfold indicator in the title bar
-    auto arrowArea = getLocalBounds().removeFromTop (headerHeight).removeFromRight (headerHeight + 46).reduced (10, 9);
-    g.setColour (theme::textDim);
-    g.setFont (theme::label (12.0f, true));
-    g.drawText (open ? "HIDE" : "SHOW", arrowArea.removeFromLeft (40), juce::Justification::centredRight);
-    auto a = arrowArea.removeFromRight (12).toFloat().withSizeKeepingCentre (10.0f, 10.0f);
-    juce::Path arrow;
-
-    if (open)
-        arrow.addTriangle (a.getX(), a.getY() + 2.0f, a.getRight(), a.getY() + 2.0f, a.getCentreX(), a.getBottom() - 1.0f);
-    else
-        arrow.addTriangle (a.getX() + 2.0f, a.getY(), a.getX() + 2.0f, a.getBottom(), a.getRight() - 1.0f, a.getCentreY());
-
-    g.fillPath (arrow);
-
     if (! open)
         return;
 
@@ -161,6 +152,8 @@ void SynthMemoryPanel::paint (juce::Graphics& g)
 
 void SynthMemoryPanel::resized()
 {
+    foldButton.setBounds (getLocalBounds().removeFromTop (headerHeight).removeFromRight (78).reduced (8, 4).translated (0, 1));
+
     auto r = getLocalBounds().reduced (12, 0).removeFromBottom (26 + 8).withTrimmedBottom (8);
     readButton.setBounds (r.removeFromLeft (r.getWidth() / 2).withTrimmedRight (3));
     importButton.setBounds (r.withTrimmedLeft (3));

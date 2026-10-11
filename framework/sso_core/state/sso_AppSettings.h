@@ -18,9 +18,24 @@ public:
         options.osxLibrarySubFolder = "Application Support";
         options.millisecondsBeforeSaving = 500;
         file = std::make_unique<juce::PropertiesFile> (options);
+        loadedVersion = file->getFile().getLastModificationTime();
     }
 
-    juce::PropertiesFile& get() noexcept { return *file; }
+    /** The settings, re-read first if another process (standalone app, another host) saved
+        the file since - otherwise this process would write its stale copy back over them. */
+    juce::PropertiesFile& get()
+    {
+        const juce::ScopedLock sl (lock);
+        auto modified = file->getFile().getLastModificationTime();
+
+        if (modified != loadedVersion && ! file->needsToBeSaved())
+        {
+            file->reload();
+            loadedVersion = modified;
+        }
+
+        return *file;
+    }
 
     static juce::File getDataDirectory()
     {
@@ -30,6 +45,8 @@ public:
 
 private:
     std::unique_ptr<juce::PropertiesFile> file;
+    juce::Time loadedVersion;
+    juce::CriticalSection lock;
 };
 
 } // namespace sso

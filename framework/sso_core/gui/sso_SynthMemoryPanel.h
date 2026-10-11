@@ -69,7 +69,7 @@ private:
     int bank = 0, group = 0;
     int hoverSlot = -1;
     juce::String status;
-    juce::TextButton readButton { "READ ALL" }, importButton { "IMPORT BANK" };
+    juce::TextButton readButton { "READ ALL" }, importButton { "IMPORT BANK" }, foldButton;
     juce::ScopedMessageBox messageBox;
     juce::SharedResourcePointer<AppSettings> settings;
     bool open = false;
