@@ -13,15 +13,25 @@ namespace
         // The editor remembers its size and browser state; don't let the snapshot change the user's settings.
         juce::SharedResourcePointer<sso::AppSettings> settings;
         auto scaleKey = deviceId + ".scale", browserKey = deviceId + ".browserVisible";
-        auto savedScale = settings->get().getValue (scaleKey);
-        auto savedBrowser = settings->get().getValue (browserKey);
+        auto& props = settings->get();
+        std::map<juce::String, std::optional<juce::String>> saved;
+
+        for (auto key : { scaleKey, browserKey, deviceId + ".memoryOpen" })
+            saved[key] = props.containsKey (key) ? std::optional<juce::String> (props.getValue (key)) : std::nullopt;
+
         const juce::ScopeGuard restoreSettings { [&]
         {
-            settings->get().setValue (scaleKey, savedScale);
-            settings->get().setValue (browserKey, savedBrowser);
-            settings->get().saveIfNeeded();
+            for (auto& [key, value] : saved)
+            {
+                if (value.has_value())
+                    props.setValue (key, *value);
+                else
+                    props.removeValue (key);
+            }
+
+            props.saveIfNeeded();
         } };
-        settings->get().setValue (browserKey, ! args.contains ("--no-browser"));
+        props.setValue (browserKey, ! args.contains ("--no-browser"));
 
         Processor processor;
 
