@@ -104,4 +104,44 @@ std::optional<DeviceDefinition::IncomingPatch> KiwiTechnicsDevice::parsePatchDum
     return result;
 }
 
+//==============================================================================
+juce::MidiMessage KiwiTechnicsDevice::createGlobalsRequest (const MidiSettings& s) const
+{
+    return createSysEx (s, requestGlobals, {});
+}
+
+std::optional<std::vector<uint8_t>> KiwiTechnicsDevice::parseGlobalsDump (const MidiSettings& s, const juce::MidiMessage& m) const
+{
+    if (! m.isSysEx())
+        return std::nullopt;
+
+    auto* d = m.getSysExData();
+    auto size = m.getSysExDataSize();
+
+    if (size <= headerSize + 2
+        || std::memcmp (d, manufacturer, sizeof (manufacturer)) != 0
+        || d[sizeof (manufacturer)] != modelId
+        || (d[headerSize] & 0x0f) != (s.deviceId & 0x0f)
+        || d[headerSize + 1] != globalsDump)
+        return std::nullopt;
+
+    return std::vector<uint8_t> (d + headerSize + 2, d + size);
+}
+
+std::vector<juce::MidiMessage> KiwiTechnicsDevice::createGlobalMessages (const MidiSettings& s, const std::function<int (int)>& valueOf) const
+{
+    // One "global parameter" message per byte, built from all fields sharing it
+    std::vector<juce::MidiMessage> result;
+    std::set<int> offsets;
+
+    for (auto& g : globalParams)
+        offsets.insert (g.offset);
+
+    for (auto offset : offsets)
+        result.push_back (createSysEx (s, globalParameter,
+                                       { (uint8_t) offset, (uint8_t) buildFieldByte (globalParams, offset, valueOf) }));
+
+    return result;
+}
+
 } // namespace sso::kiwitechnics

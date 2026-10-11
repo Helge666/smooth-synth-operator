@@ -34,39 +34,59 @@ Patch DeviceDefinition::createInitPatch() const
 
 static int fieldMask (const ParamSpec& s) noexcept { return ((1 << s.bits) - 1) << s.shift; }
 
-int DeviceDefinition::getValue (const Patch& patch, int paramIndex) const
+int DeviceDefinition::readField (const ParamSpec& s, const std::vector<uint8_t>& data)
 {
-    auto& s = params[(size_t) paramIndex];
-
-    if (! juce::isPositiveAndBelow (s.offset, (int) patch.data.size()))
+    if (! juce::isPositiveAndBelow (s.offset, (int) data.size()))
         return s.defaultValue;
 
-    auto stored = (patch.data[(size_t) s.offset] & fieldMask (s)) >> s.shift;
+    auto stored = (data[(size_t) s.offset] & fieldMask (s)) >> s.shift;
 
-    if (s.isWide() && juce::isPositiveAndBelow (s.loOffset, (int) patch.data.size()))
-        stored = (stored << 7) | (patch.data[(size_t) s.loOffset] & 0x7f);
+    if (s.isWide() && juce::isPositiveAndBelow (s.loOffset, (int) data.size()))
+        stored = (stored << 7) | (data[(size_t) s.loOffset] & 0x7f);
 
     return s.fromStored (stored);
 }
 
-void DeviceDefinition::setValue (Patch& patch, int paramIndex, int value) const
+void DeviceDefinition::writeField (const ParamSpec& s, std::vector<uint8_t>& data, int value)
 {
-    auto& s = params[(size_t) paramIndex];
-
-    if (! juce::isPositiveAndBelow (s.offset, (int) patch.data.size()))
+    if (! juce::isPositiveAndBelow (s.offset, (int) data.size()))
         return;
 
     auto stored = s.toStored (value);
 
-    if (s.isWide() && juce::isPositiveAndBelow (s.loOffset, (int) patch.data.size()))
+    if (s.isWide() && juce::isPositiveAndBelow (s.loOffset, (int) data.size()))
     {
-        patch.data[(size_t) s.loOffset] = (uint8_t) (stored & 0x7f);
+        data[(size_t) s.loOffset] = (uint8_t) (stored & 0x7f);
         stored >>= 7;
     }
 
-    auto& byte = patch.data[(size_t) s.offset];
+    auto& byte = data[(size_t) s.offset];
     auto mask = fieldMask (s);
     byte = (uint8_t) ((byte & ~mask) | ((stored << s.shift) & mask));
+}
+
+int DeviceDefinition::getValue (const Patch& patch, int paramIndex) const
+{
+    return readField (params[(size_t) paramIndex], patch.data);
+}
+
+void DeviceDefinition::setValue (Patch& patch, int paramIndex, int value) const
+{
+    writeField (params[(size_t) paramIndex], patch.data, value);
+}
+
+int DeviceDefinition::getGlobalValue (const std::vector<uint8_t>& globalDump, int globalIndex) const
+{
+    return readField (globalParams[(size_t) globalIndex], globalDump);
+}
+
+int DeviceDefinition::indexOfGlobal (const juce::String& id) const
+{
+    for (size_t i = 0; i < globalParams.size(); ++i)
+        if (globalParams[i].id == id)
+            return (int) i;
+
+    return -1;
 }
 
 DeviceDefinition::SlotLayout DeviceDefinition::getSlotLayout() const
@@ -87,11 +107,16 @@ juce::String DeviceDefinition::getGroupName (int group) const
 
 int DeviceDefinition::buildFieldByte (int offset, const std::function<int (int)>& valueOf) const
 {
+    return buildFieldByte (params, offset, valueOf);
+}
+
+int DeviceDefinition::buildFieldByte (const std::vector<ParamSpec>& specs, int offset, const std::function<int (int)>& valueOf)
+{
     int byte = 0;
 
-    for (size_t i = 0; i < params.size(); ++i)
+    for (size_t i = 0; i < specs.size(); ++i)
     {
-        auto& s = params[i];
+        auto& s = specs[i];
 
         if (s.offset == offset)
             byte |= (s.toStored (valueOf ((int) i)) << s.shift) & fieldMask (s);

@@ -14,6 +14,7 @@
 #include "gui/sso_LookAndFeel.cpp"
 #include "gui/sso_Widgets.cpp"
 #include "gui/sso_ModMatrix.cpp"
+#include "gui/sso_GlobalsPanel.cpp"
 #include "gui/sso_HeaderBar.cpp"
 #include "gui/sso_SynthMemoryPanel.cpp"
 #include "gui/sso_PresetBrowser.cpp"

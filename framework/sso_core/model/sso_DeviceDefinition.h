@@ -79,8 +79,35 @@ public:
 
     virtual std::optional<IncomingPatch> parsePatchDump (const MidiSettings&, const juce::MidiMessage&) const = 0;
 
+    //==============================================================================
+    /** Synth-wide settings that are not part of a sound (tuning, arpeggiator clock, ...).
+        Only musical ones belong here - never MIDI channels or MIDI enables, which the app
+        needs to talk to the synth. Their offsets refer to the synth's global dump. */
+    const std::vector<ParamSpec>& getGlobalParams() const noexcept   { return globalParams; }
+    int indexOfGlobal (const juce::String& id) const;
+
+    virtual juce::MidiMessage createGlobalsRequest (const MidiSettings&) const   { return {}; }
+    virtual std::optional<std::vector<uint8_t>> parseGlobalsDump (const MidiSettings&, const juce::MidiMessage&) const
+    {
+        return std::nullopt;
+    }
+
+    /** Messages that set every global parameter in the synth (valueOf: global param index -> value). */
+    virtual std::vector<juce::MidiMessage> createGlobalMessages (const MidiSettings&, const std::function<int (int)>&) const
+    {
+        return {};
+    }
+
+    int getGlobalValue (const std::vector<uint8_t>& globalDump, int globalIndex) const;
+
+    // Field access shared by sound and global parameters
+    static int readField (const ParamSpec&, const std::vector<uint8_t>& data);
+    static void writeField (const ParamSpec&, std::vector<uint8_t>& data, int value);
+    static int buildFieldByte (const std::vector<ParamSpec>&, int offset, const std::function<int (int)>& valueOf);
+
 protected:
     std::vector<ParamSpec> params;
+    std::vector<ParamSpec> globalParams;
 };
 
 } // namespace sso

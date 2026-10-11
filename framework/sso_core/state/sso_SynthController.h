@@ -82,6 +82,18 @@ public:
     double getNoteOffsetMs() const;
     void setNoteOffsetMs (double);
 
+    //==============================================================================
+    /** The synth's global settings (see DeviceDefinition::getGlobalParams), kept in the
+        app settings. With "send on connect" they are sent whenever this instance starts
+        controlling the synth - for synths that only store globals from their own panel. */
+    int getGlobalValue (int globalIndex) const;
+    void setGlobalValue (int globalIndex, int value);       // stores and sends it now
+    bool getSendGlobalsOnConnect() const;
+    void setSendGlobalsOnConnect (bool);
+    void sendGlobals();
+    void requestGlobalsFromSynth();                         // the answer replaces the stored values
+    std::function<void()> onGlobalsReceived;                // message thread
+
     /** Opens the ports and remembers the choice for all instances. */
     void setMidiOutput (const juce::String& identifier);
     void setMidiInput (const juce::String& identifier);
@@ -117,6 +129,8 @@ private:
     void ownershipChanged (bool isOwner, bool takenOver) override;
     void connectionChanged();
     void sendPendingSoundIfPossible();
+    void sendGlobalsIfDue();
+    void storeGlobals();
 
     void parameterChanged (const juce::String& parameterID, float newValue) override;
     void handleIncomingMessage (const juce::MidiMessage&);
@@ -144,6 +158,8 @@ private:
     PresetRef presetRef;
     std::atomic<bool> active { true };
     bool pendingSend = false;           // a restored sound still has to go to the synth
+    std::vector<int> globalValues;
+    juce::String globalsSentTo;         // output the globals were last sent to (empty = not sent)
     bool registered = false;
     juce::String registeredKey;
     juce::String description { "SSO" };

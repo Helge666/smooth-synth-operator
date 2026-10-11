@@ -204,6 +204,37 @@ Kiwi3PDevice::Kiwi3PDevice() : KiwiTechnicsDevice (0x01)    // F0 00 21 16 60 [0
     p.back().format = [] (int v) { return v == 0 ? juce::String ("-") : "Seq " + juce::String (v); };
     p.push_back (continuous ("load_pattern", "Load Pattern", "Sequencer", 0x43, 56, 0, 0, 16));
     p.back().format = [] (int v) { return v == 0 ? juce::String ("-") : "Pat " + juce::String (v); };
+
+    // Globals --------------------------------------------------------------------------
+    // Musical settings kept outside the sounds (offsets in the 48-byte global dump). The
+    // synth stores them only from its panel; the app can send them whenever it connects,
+    // as the Kiwi Patch Editor did. Defaults are the values the Patch Editor used to set.
+    // MIDI channels, device ID and MIDI enables (0x0a-0x16) are deliberately not included.
+    auto& g = globalParams;
+    const juce::StringArray clocks { "Internal", "LFO 2", "Pattern", "MIDI / 3", "MIDI / 4", "MIDI / 6", "MIDI / 9",
+                                     "MIDI / 12", "MIDI / 18", "MIDI / 24", "MIDI / 36", "MIDI / 48", "MIDI / 72",
+                                     "MIDI / 96", "MIDI / 128", "MIDI / 144", "MIDI / 168", "MIDI / 192" };
+    auto patternClocks = clocks;
+    patternClocks.remove (2);       // the pattern can't clock itself
+
+    g.push_back (bipolar ("g_fine_tune", "Fine Tune", "Tuning", 0x17, -1));
+    g.back().format = [] (int v) { auto c = juce::roundToInt ((v - 63) * 200.0 / 63.0); return (c > 0 ? "+" : "") + juce::String (c) + " ct"; };
+    g.push_back (continuous ("g_velocity", "Internal Velocity", "Keyboard", 0x01, -1, 64));
+    g.push_back (choice ("g_detune_mode", "Voice Detune", "Keyboard", 0x00, 0, 1, { "Unison/Mono", "All Modes" }, -1, {}));
+    g.push_back (toggle ("g_arp_on", "Arpeggiator", "Arpeggiator", 0x02, 0));
+    g.push_back (choice ("g_arp_direction", "Direction", "Arpeggiator", 0x02, 1, 2, { "Up", "Down", "Up & Down", "Random" }, -1, {}));
+    g.push_back (choice ("g_arp_range", "Range", "Arpeggiator", 0x03, 0, 2, { "1 Oct", "2 Oct", "3 Oct" }, -1, {}));
+    g.push_back (choice ("g_arp_clock", "Clock", "Arpeggiator", 0x04, 0, 5, clocks, -1, {}, 3));
+    g.push_back (choice ("g_seq_local", "Plays", "Sequencer", 0x05, 0, 2, { "Local + MIDI", "Local Only", "MIDI Only" }, -1, {}));
+    g.push_back (toggle ("g_seq_midi_start", "MIDI Start/Stop", "Sequencer", 0x05, 2));
+    g.push_back (choice ("g_seq_clock", "Clock", "Sequencer", 0x06, 0, 5, clocks, -1, {}));
+    g.push_back (toggle ("g_pattern_on", "Pattern", "Pattern", 0x08, 2));
+    g.back().defaultValue = 1;
+    g.push_back (toggle ("g_pattern_vcf", "To VCF", "Pattern", 0x08, 1));
+    g.push_back (toggle ("g_pattern_vca", "To VCA", "Pattern", 0x08, 0));
+    g.back().defaultValue = 1;
+    g.push_back (continuous ("g_pattern_level", "Level", "Pattern", 0x07, -1, 50));
+    g.push_back (choice ("g_pattern_clock", "Clock", "Pattern", 0x09, 0, 5, patternClocks, -1, {}, 2));
 }
 
 //==============================================================================

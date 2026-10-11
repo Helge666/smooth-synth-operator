@@ -277,8 +277,19 @@ HeaderBar::HeaderBar (SynthController& c, const juce::String& line)
                                                 midiButton.getScreenBounds(), nullptr);
     };
 
+    globalsButton.setTooltip ("The synth's global settings (tuning, arpeggiator, ...)");
+    globalsButton.onClick = [this]
+    {
+        juce::CallOutBox::launchAsynchronously (std::make_unique<GlobalsPanel> (controller),
+                                                globalsButton.getScreenBounds(), nullptr);
+    };
+
     for (auto* b : { &browserButton, &testButton, &getButton, &sendButton, &freezeButton, &midiButton })
         addAndMakeVisible (b);
+
+    // only for synths with global settings the app manages
+    addChildComponent (globalsButton);
+    globalsButton.setVisible (! controller.getDevice().getGlobalParams().empty());
 
     addAndMakeVisible (display);
     controller.addChangeListener (this);
@@ -358,8 +369,13 @@ void HeaderBar::resized()
     r.removeFromLeft (210);
     r.removeFromRight (56);
 
-    auto buttons = r.removeFromRight (6 * 96);
-    for (auto* b : { &browserButton, &testButton, &getButton, &sendButton, &freezeButton, &midiButton })
+    std::vector<juce::TextButton*> visibleButtons { &browserButton, &testButton, &getButton, &sendButton, &freezeButton, &midiButton };
+
+    if (globalsButton.isVisible())
+        visibleButtons.push_back (&globalsButton);
+
+    auto buttons = r.removeFromRight ((int) visibleButtons.size() * 96);
+    for (auto* b : visibleButtons)
         b->setBounds (buttons.removeFromLeft (96).reduced (4, 0).withSizeKeepingCentre (88, 46));
 
     display.setBounds (r.reduced (10, 4));

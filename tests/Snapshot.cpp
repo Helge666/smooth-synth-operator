@@ -43,6 +43,25 @@ namespace
             processor.controller.setInstanceDescription ("Cubase - track \"Pad\"");
         }
 
+        if (args.contains ("--globals"))      // just the globals call-out
+        {
+            sso::LookAndFeel lf;
+            sso::GlobalsPanel panel (processor.controller);
+            panel.setLookAndFeel (&lf);
+            auto image = juce::Image (juce::Image::ARGB, panel.getWidth(), panel.getHeight(), true);
+            {
+                juce::Graphics g (image);
+                g.fillAll (sso::theme::panel);
+                panel.paintEntireComponent (g, true);
+            }
+            out.deleteFile();
+            juce::FileOutputStream stream (out);
+            juce::PNGImageFormat().writeImageToStream (image, stream);
+            panel.setLookAndFeel (nullptr);
+            std::cout << "wrote " << out.getFullPathName() << std::endl;
+            return 0;
+        }
+
         std::unique_ptr<juce::AudioProcessorEditor> editor ((second != nullptr ? *second : processor).createEditor());
 
         auto cheeks = sso::theme::woodCheeks ? 2 * sso::ProgrammerEditor::cheekWidth : 0;

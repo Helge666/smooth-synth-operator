@@ -28,6 +28,10 @@ public:
     juce::MidiMessage createSlotDump (const MidiSettings&, const Patch&, int slot) const override;
     std::optional<IncomingPatch> parsePatchDump (const MidiSettings&, const juce::MidiMessage&) const override;
 
+    juce::MidiMessage createGlobalsRequest (const MidiSettings&) const override;
+    std::optional<std::vector<uint8_t>> parseGlobalsDump (const MidiSettings&, const juce::MidiMessage&) const override;
+    std::vector<juce::MidiMessage> createGlobalMessages (const MidiSettings&, const std::function<int (int)>&) const override;
+
     // SysEx command IDs shared by the upgrades
     enum Command : uint8_t
     {
@@ -38,6 +42,7 @@ public:
         requestTone         = 0x05,
         toneDump            = 0x06,
         editBufferParameter = 0x0e,
+        globalParameter     = 0x10,     // RAM only - the synths store globals only from their panel
     };
 
     juce::MidiMessage createSysEx (const MidiSettings&, uint8_t command, std::initializer_list<uint8_t> payload,

@@ -79,7 +79,7 @@ private:
     juce::String productLine;
     LcdDisplay display;
     juce::TextButton browserButton { "BROWSER" }, testButton { "TEST" }, getButton { "GET" }, sendButton { "SEND" },
-                     freezeButton { "FREEZE" }, midiButton { "MIDI" };
+                     freezeButton { "FREEZE" }, midiButton { "MIDI" }, globalsButton { "GLOBALS" };
     TestNotePlayer testPlayer;
     uint32_t lastSent = 0, lastReceived = 0;
     int txFlash = 0, rxFlash = 0;

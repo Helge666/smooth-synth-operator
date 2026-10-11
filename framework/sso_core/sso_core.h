@@ -47,6 +47,7 @@
 #include "gui/sso_LookAndFeel.h"
 #include "gui/sso_Widgets.h"
 #include "gui/sso_ModMatrix.h"
+#include "gui/sso_GlobalsPanel.h"
 #include "gui/sso_HeaderBar.h"
 #include "gui/sso_SynthMemoryPanel.h"
 #include "gui/sso_PresetBrowser.h"

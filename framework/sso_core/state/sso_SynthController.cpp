@@ -79,6 +79,15 @@ SynthController::SynthController (const DeviceDefinition& d, juce::AudioProcesso
     auto& props = settings->get();
     midiChannel = props.getIntValue (settingsKey ("channel"), 1);
     deviceId = props.getIntValue (settingsKey ("deviceId"), 0);
+
+    for (auto& spec : device.getGlobalParams())
+        globalValues.push_back (spec.defaultValue);
+
+    if (auto* stored = juce::JSON::parse (props.getValue (settingsKey ("globals"))).getDynamicObject())
+        for (size_t i = 0; i < globalValues.size(); ++i)
+            if (auto& spec = device.getGlobalParams()[i]; stored->hasProperty (spec.id))
+                globalValues[i] = juce::jlimit (spec.minValue, spec.maxValue, (int) stored->getProperty (spec.id));
+
     connection.setOutput (props.getValue (settingsKey ("midiOut")));
     connection.setInput (props.getValue (settingsKey ("midiIn")));
 
@@ -121,6 +130,10 @@ void SynthController::ownershipChanged (bool isOwner, bool takenOver)
     if (active && ! wasActive && takenOver)
         pendingSend = true;     // the user wants this instance's sound on the synth
 
+    if (! active)
+        globalsSentTo = {};     // whoever controls the synth now sends its own
+
+    sendGlobalsIfDue();
     sendPendingSoundIfPossible();
     sendChangeMessage();
 }
@@ -134,6 +147,7 @@ void SynthController::connectionChanged()
         registry->keyChanged (*this);
     }
 
+    sendGlobalsIfDue();
     sendPendingSoundIfPossible();
     sendChangeMessage();
 }
@@ -146,6 +160,74 @@ void SynthController::sendPendingSoundIfPossible()
     pendingSend = false;
     silence();
     sendToSynth();
+}
+
+void SynthController::sendGlobalsIfDue()
+{
+    // only once the registry decided whether this instance controls the synth
+    if (! registered || device.getGlobalParams().empty() || ! getSendGlobalsOnConnect() || ! active || ! connection.isOutputOpen())
+        return;
+
+    if (globalsSentTo == connection.getOutputId())
+        return;
+
+    globalsSentTo = connection.getOutputId();
+    sendGlobals();
+}
+
+void SynthController::sendGlobals()
+{
+    if (! active)
+        return;
+
+    for (auto& m : device.createGlobalMessages (getMidiSettings(), [this] (int i) { return globalValues[(size_t) i]; }))
+        sender.enqueue (m);
+}
+
+int SynthController::getGlobalValue (int index) const
+{
+    return juce::isPositiveAndBelow (index, (int) globalValues.size()) ? globalValues[(size_t) index] : 0;
+}
+
+void SynthController::setGlobalValue (int index, int value)
+{
+    if (! juce::isPositiveAndBelow (index, (int) globalValues.size()))
+        return;
+
+    auto& spec = device.getGlobalParams()[(size_t) index];
+    globalValues[(size_t) index] = juce::jlimit (spec.minValue, spec.maxValue, value);
+    storeGlobals();
+    sendGlobals();      // all of them - a dozen short messages
+    sendChangeMessage();
+}
+
+void SynthController::storeGlobals()
+{
+    auto* obj = new juce::DynamicObject();
+
+    for (size_t i = 0; i < globalValues.size(); ++i)
+        obj->setProperty (device.getGlobalParams()[i].id, globalValues[i]);
+
+    settings->get().setValue (settingsKey ("globals"), juce::JSON::toString (juce::var (obj), true));
+}
+
+bool SynthController::getSendGlobalsOnConnect() const
+{
+    return settings->get().getBoolValue (settingsKey ("sendGlobals"), false);
+}
+
+void SynthController::setSendGlobalsOnConnect (bool shouldSend)
+{
+    settings->get().setValue (settingsKey ("sendGlobals"), shouldSend);
+    globalsSentTo = {};
+    sendGlobalsIfDue();
+    sendChangeMessage();
+}
+
+void SynthController::requestGlobalsFromSynth()
+{
+    if (active && ! device.getGlobalParams().empty())
+        sender.enqueue (device.createGlobalsRequest (getMidiSettings()));
 }
 
 void SynthController::setInstanceDescription (const juce::String& d)
@@ -350,6 +432,20 @@ void SynthController::handleIncomingMessage (const juce::MidiMessage& m)
 {
     if (! active)
         return;     // answers to another instance's requests
+
+    if (auto globals = device.parseGlobalsDump (getMidiSettings(), m))
+    {
+        for (size_t i = 0; i < globalValues.size(); ++i)
+            globalValues[i] = device.getGlobalValue (*globals, (int) i);
+
+        storeGlobals();
+        sendChangeMessage();
+
+        if (onGlobalsReceived != nullptr)
+            onGlobalsReceived();
+
+        return;
+    }
 
     auto incoming = device.parsePatchDump (getMidiSettings(), m);
 
