@@ -95,3 +95,13 @@ The app sends 12-bit parameters with SysEx 0E (one message, exact) and switches 
 Read back every written tone: in a run of 512 writes, 5 tones (always the same sound,
 "Fat VeloBassII") came back with four wrong values after the first write and were correct after
 writing them again.
+
+## Observations (open)
+
+- **Effect speed/intensity acts very differently per effect** (heard 2026-10-11, set from the
+  app and from the panel alike; stored as one 12-bit value 0x37/0x38 for all modes):
+  the phaser is only clearly a phaser at very low values (above about 3 % it is hard to tell
+  from the chorus); the ensemble works well at high values but approaches the chorus in the
+  middle range. Possible later ideas: a per-mode display scale or per-mode generator ranges.
+- Sending the speed with SysEx 0E reaches the effect hardware immediately (listening test:
+  phaser slow at 20 %, fast at 80 %). The panel sends no MIDI when its controls move.
