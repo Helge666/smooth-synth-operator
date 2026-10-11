@@ -8,7 +8,6 @@ namespace
     // CC values in the middle of the ranges the firmware decodes
     const std::vector<int> cc2 { 100, 16 };                     // 64-127 / 0-63 (VCA mode: EG / gate)
     const std::vector<int> cc3 { 16, 48, 96 };                  // 0-31 / 32-63 / 64-127
-    const std::vector<int> cc4 { 16, 48, 80, 112 };             // quarters
     const std::vector<int> ccWave { 8, 24, 40, 56, 96 };        // 16 per wave, 64-127 = random
 
     std::vector<int> ccSteps10 (int count)                      // clock dividers: 10 per step
@@ -118,8 +117,11 @@ KiwiSixDevice::KiwiSixDevice() : KiwiTechnicsDevice (0x02)    // F0 00 21 16 60 
     p.push_back (choice ("mg_wave", "Wave", "MG", 0x36, 3, 3, lfoWaves, 65, ccWave));
 
     // Effects ----------------------------------------------------------------------
+    // Flags as in the manual's tone table: chorus 4, ensemble 2, phase 1 (the factory "Strings"
+    // use 2 = ensemble like the original PolySix preset). CC 118 decodes 32-63 phase,
+    // 64-95 ensemble, 96-127 chorus.
     p.push_back (choice ("fx_type", "Mode", "Effects", 0x39, 0, 3, { "Off", "Chorus", "Phase", "Ensemble" },
-                         118, cc4, 0, { 0, 1, 2, 4 }));
+                         118, { 16, 112, 48, 80 }, 0, { 0, 4, 1, 2 }));
     p.push_back (wide ("fx_speed", "Speed/Intensity", "Effects", 0x37, 63, 2048));
 
     // Key assign and arpeggiator ---------------------------------------------------

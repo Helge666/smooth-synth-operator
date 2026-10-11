@@ -15,6 +15,25 @@ SynthMemoryPanel::SynthMemoryPanel (PresetLibrary& lib, SynthController& c)
     addAndMakeVisible (importButton);
 
     setTooltip ("Click: load into editor. Drop a sound from the list to store it in the synth.");
+
+    open = settings->get().getBoolValue (controller.getDevice().getDeviceId() + ".memoryOpen", false);
+    readButton.setVisible (open);
+    importButton.setVisible (open);
+}
+
+void SynthMemoryPanel::setOpen (bool shouldBeOpen)
+{
+    if (open == shouldBeOpen)
+        return;
+
+    open = shouldBeOpen;
+    settings->get().setValue (controller.getDevice().getDeviceId() + ".memoryOpen", open);
+    readButton.setVisible (open);
+    importButton.setVisible (open);
+    repaint();
+
+    if (onOpenChanged != nullptr)
+        onOpenChanged();
 }
 
 SynthMemoryPanel::~SynthMemoryPanel()
@@ -43,6 +62,9 @@ juce::Rectangle<int> SynthMemoryPanel::groupButtonBounds (int g) const
 
 int SynthMemoryPanel::getPreferredHeight() const
 {
+    if (! open)
+        return headerHeight + 4;
+
     auto rows = (layout.slotsPerGroup + layout.columns - 1) / juce::jmax (1, layout.columns);
     return tilesTop() + rows * (tileHeight + 4) + 4 + 62;
 }
@@ -75,6 +97,24 @@ void SynthMemoryPanel::paint (juce::Graphics& g)
 {
     paintSectionFrame (g, getLocalBounds(), "Synth memory", theme::orange);
     auto& device = controller.getDevice();
+
+    // fold / unfold indicator in the title bar
+    auto arrowArea = getLocalBounds().removeFromTop (headerHeight).removeFromRight (headerHeight + 46).reduced (10, 9);
+    g.setColour (theme::textDim);
+    g.setFont (theme::label (12.0f, true));
+    g.drawText (open ? "HIDE" : "SHOW", arrowArea.removeFromLeft (40), juce::Justification::centredRight);
+    auto a = arrowArea.removeFromRight (12).toFloat().withSizeKeepingCentre (10.0f, 10.0f);
+    juce::Path arrow;
+
+    if (open)
+        arrow.addTriangle (a.getX(), a.getY() + 2.0f, a.getRight(), a.getY() + 2.0f, a.getCentreX(), a.getBottom() - 1.0f);
+    else
+        arrow.addTriangle (a.getX() + 2.0f, a.getY(), a.getX() + 2.0f, a.getBottom(), a.getRight() - 1.0f, a.getCentreY());
+
+    g.fillPath (arrow);
+
+    if (! open)
+        return;
 
     auto selectorButton = [&g] (juce::Rectangle<int> r, bool selected, const juce::String& text)
     {
@@ -134,6 +174,15 @@ void SynthMemoryPanel::setStatus (const juce::String& s)
 
 void SynthMemoryPanel::mouseDown (const juce::MouseEvent& e)
 {
+    if (e.getPosition().y < headerHeight)
+    {
+        setOpen (! open);
+        return;
+    }
+
+    if (! open)
+        return;
+
     for (int b = 0; b < layout.banks; ++b)
     {
         if (bankButtonBounds (b).contains (e.getPosition()))
@@ -332,7 +381,11 @@ bool SynthMemoryPanel::isInterestedInDragSource (const SourceDetails& d)
     return d.description.toString().startsWith (dragPrefix);
 }
 
-void SynthMemoryPanel::itemDragEnter (const SourceDetails& d) { itemDragMove (d); }
+void SynthMemoryPanel::itemDragEnter (const SourceDetails& d)
+{
+    setOpen (true);     // dragging a sound onto the folded bar opens it
+    itemDragMove (d);
+}
 
 void SynthMemoryPanel::itemDragMove (const SourceDetails& d)
 {

@@ -6,7 +6,9 @@ namespace
     using Rule = PatchGenerator::Rule;
     using RuleSet = PatchGenerator::RuleSet;
 
-    // Rules are written in knob steps 0-127 and scaled to the 12-bit range
+    // Rules are written in knob steps 0-127 and scaled to the 12-bit range.
+    // There is one envelope for filter and amp, and its times are short in the lower half of
+    // the range: the factory sounds use decay/release mostly 45-95 % - the rules follow them.
     constexpr int step = 32;
     constexpr int centre = 2048;
 
@@ -60,7 +62,7 @@ namespace
         r["vca_level"] = rawRange (1850, 2050);     // as loud as the factory sounds (1983)
         r["vca_mode"] = raw (eg);
 
-        envelope (r, range (0, 10), range (40, 80), range (60, 110), range (20, 50));
+        envelope (r, range (0, 6), range (63, 102), range (76, 120), range (51, 83));
 
         r["mg_rate"] = range (70, 95);              // vibrato
         r["mg_delay"] = range (0, 40);
@@ -84,18 +86,23 @@ namespace
     RuleSet bass()
     {
         RuleSet r;
-        r["vco_octave"] = pick ({ { oct16, 0.7f }, { oct8, 0.3f } });
-        r["vco_wave"] = pick ({ { saw, 0.5f }, { pw, 0.3f }, { pwm, 0.2f } });
-        r["sub_osc"] = pick ({ { sub1, 0.5f }, { sub2, 0.3f }, { subOff, 0.2f } });
-        r["cutoff"] = range (25, 60);
-        r["resonance"] = range (0, 80);
-        r["eg_int"] = bipolar (20, 55);
-        r["kbd_track"] = range (40, 90);
-        r["vca_level"] = rawRange (2100, 2500);     // low notes need more level to sound as loud
-        envelope (r, range (0, 4), range (25, 70), range (0, 45), range (8, 30));
+        // Like the factory basses: 8' plus sub one octave down, a long filter decay, the amp
+        // either following the envelope with sustain or held by the gate.
+        r["vco_octave"] = pick ({ { oct8, 0.85f }, { oct16, 0.15f } });
+        r["vco_wave"] = pick ({ { saw, 0.55f }, { pw, 0.45f } });
+        r["pw_pwm"] = range (30, 70);
+        r["sub_osc"] = pick ({ { sub1, 0.8f }, { subOff, 0.15f }, { sub2, 0.05f } });
+        r["cutoff"] = range (20, 75);
+        r["resonance"] = range (0, 70);
+        r["eg_int"] = bipolar (32, 60);
+        r["kbd_track"] = range (60, 120);
+        r["vca_level"] = rawRange (2000, 2400);
+        r["vca_mode"] = pick ({ { eg, 0.65f }, { gate, 0.35f } });
+        envelope (r, range (0, 2), range (57, 99), pickSteps ({ { 0, 0.35f }, { 76, 0.25f }, { 95, 0.25f }, { 115, 0.15f } }),
+                  pickSteps ({ { 0, 0.4f }, { 50, 0.3f }, { 65, 0.3f } }));
         r["mg_level"] = raw (0);
-        r["key_assign"] = pick ({ { poly1, 0.5f }, { unison, 0.5f } });
-        r["fx_type"] = pick ({ { fxOff, 0.8f }, { chorus, 0.2f } });
+        r["key_assign"] = pick ({ { poly1, 0.6f }, { unison, 0.4f } });
+        r["fx_type"] = pick ({ { fxOff, 0.65f }, { phase, 0.2f }, { chorus, 0.15f } });
         return r;
     }
 
@@ -106,8 +113,8 @@ namespace
         r["cutoff"] = range (40, 80);
         r["resonance"] = range (0, 40);
         r["eg_int"] = bipolar (15, 42);
-        envelope (r, range (0, 15), range (40, 80), range (30, 90), range (15, 40));
-        r["fx_type"] = pick ({ { chorus, 0.5f }, { ensemble, 0.3f }, { fxOff, 0.2f } });
+        envelope (r, range (0, 12), range (63, 102), range (51, 120), range (51, 83));
+        r["fx_type"] = pick ({ { chorus, 0.4f }, { ensemble, 0.3f }, { phase, 0.15f }, { fxOff, 0.15f } });
         return r;
     }
 
@@ -120,7 +127,7 @@ namespace
         r["cutoff"] = range (35, 75);
         r["resonance"] = range (0, 40);
         r["eg_int"] = bipolar (0, 25);
-        envelope (r, range (40, 90), range (60, 100), range (80, 120), range (60, 110));
+        envelope (r, range (56, 107), range (63, 102), range (99, 123), range (57, 102));
         r["mg_vcf"] = pick ({ { 0, 0.7f }, { 1, 0.3f } });
         r["fx_type"] = pick ({ { ensemble, 0.5f }, { chorus, 0.4f }, { phase, 0.1f } });
         r["fx_speed"] = range (20, 55);
@@ -139,7 +146,7 @@ namespace
         r["cutoff"] = range (20, 100);
         r["resonance"] = range (30, 120);
         r["eg_int"] = range (0, 127);
-        envelope (r, range (0, 110), range (0, 110), range (0, 127), range (0, 110));
+        envelope (r, range (0, 110), range (40, 120), range (0, 127), range (40, 120));
         r["mg_rate"] = range (10, 127);
         r["mg_delay"] = range (0, 60);
         r["mg_level"] = range (20, 100);
@@ -162,8 +169,8 @@ namespace
         r["resonance"] = range (0, 50);
         r["eg_int"] = bipolar (25, 55);
         r["kbd_track"] = range (70, 110);
-        envelope (r, range (0, 2), range (40, 75), range (0, 30), range (15, 40));
-        r["fx_type"] = pick ({ { chorus, 0.5f }, { fxOff, 0.5f } });
+        envelope (r, range (0, 2), range (70, 119), pickSteps ({ { 0, 0.7f }, { 64, 0.15f }, { 95, 0.15f } }), range (57, 92));
+        r["fx_type"] = pick ({ { fxOff, 0.4f }, { phase, 0.3f }, { chorus, 0.3f } });
         return r;
     }
 
@@ -176,7 +183,7 @@ namespace
         r["cutoff"] = range (50, 90);
         r["resonance"] = range (0, 20);
         r["eg_int"] = bipolar (0, 15);
-        envelope (r, range (30, 60), range (60, 90), range (100, 127), range (40, 80));
+        envelope (r, range (56, 103), range (63, 119), range (99, 123), range (56, 84));
         r["mg_delay"] = range (30, 70);
         r["mg_level"] = range (5, 12);
         r["fx_type"] = pick ({ { ensemble, 0.8f }, { chorus, 0.2f } });
@@ -193,8 +200,8 @@ namespace
         r["resonance"] = range (0, 30);
         r["eg_int"] = bipolar (0, 20);
         r["kbd_track"] = range (80, 127);
-        envelope (r, range (0, 2), range (60, 100), range (0, 20), range (60, 100));
-        r["fx_type"] = pick ({ { chorus, 0.6f }, { phase, 0.4f } });
+        envelope (r, range (0, 2), range (56, 92), range (0, 20), range (63, 112));
+        r["fx_type"] = pick ({ { chorus, 0.4f }, { ensemble, 0.4f }, { phase, 0.2f } });
         return r;
     }
 
@@ -206,7 +213,7 @@ namespace
         r["cutoff"] = range (25, 55);
         r["resonance"] = range (0, 25);
         r["eg_int"] = bipolar (25, 50);
-        envelope (r, range (10, 35), range (50, 80), range (50, 90), range (25, 45));
+        envelope (r, range (43, 60), range (67, 92), range (48, 123), range (56, 89));
         r["fx_type"] = pick ({ { fxOff, 0.5f }, { chorus, 0.5f } });
         return r;
     }
@@ -244,8 +251,8 @@ std::unique_ptr<PatchGenerator> createGenerator (const KiwiSixDevice& device)
             set ("vca_level", 1983);
 
         // An envelope that decays to silence needs some decay time to be heard
-        if (get ("vca_mode") == eg && get ("eg_sustain") < 20 * step && get ("eg_decay") < 30 * step)
-            set ("eg_decay", 30 * step);
+        if (get ("vca_mode") == eg && get ("eg_sustain") < 20 * step && get ("eg_decay") < 55 * step)
+            set ("eg_decay", 55 * step);
 
         // The filter must open at least a bit (cutoff plus positive envelope amount)
         if (get ("cutoff") + juce::jmax (0, get ("eg_int") - centre) < 35 * step)

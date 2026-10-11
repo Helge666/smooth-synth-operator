@@ -9,6 +9,7 @@ namespace sso
     - drop a library preset on a tile: write it to that memory (after confirmation,
       verified by reading it back)
     - READ ALL: refresh the cached view of the synth's memory
+    Folded to its title bar unless needed (click the bar, or drag a sound onto it).
 */
 class SynthMemoryPanel : public juce::Component,
                          public juce::DragAndDropTarget,
@@ -30,8 +31,13 @@ public:
 
     static constexpr const char* dragPrefix = "sso-preset:";
 
-    /** Height that fits the selectors, one group of tiles, status line and buttons. */
+    /** Height that fits the selectors, one group of tiles, status line and buttons -
+        or just the title bar while folded. */
     int getPreferredHeight() const;
+
+    bool isOpen() const noexcept    { return open; }
+    void setOpen (bool);
+    std::function<void()> onOpenChanged;    // the owner re-lays out
 
 private:
     int slotsPerBank() const noexcept   { return layout.groupsPerBank * layout.slotsPerGroup; }
@@ -65,6 +71,8 @@ private:
     juce::String status;
     juce::TextButton readButton { "READ ALL" }, importButton { "IMPORT BANK" };
     juce::ScopedMessageBox messageBox;
+    juce::SharedResourcePointer<AppSettings> settings;
+    bool open = false;
 
     static constexpr int headerHeight = 30;
     static constexpr int bankRowHeight = 26;

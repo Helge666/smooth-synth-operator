@@ -28,6 +28,7 @@ PresetBrowser::PresetBrowser (PresetLibrary& lib, SynthController& c)
         addAndMakeVisible (b);
 
     addAndMakeVisible (memory);
+    memory.onOpenChanged = [this] { resized(); };
 
     library.addChangeListener (this);
     controller.addChangeListener (this);
