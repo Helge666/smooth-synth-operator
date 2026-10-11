@@ -8,12 +8,25 @@ inspired by the Retroaktiv PG-2K.
 
 ## Status
 
-Early development. Working today:
+Usable with the Kiwi-3P (tested in Cubase 15 and as standalone app on Windows 11):
 
 - All 87 Kiwi-3P tone parameters, editable and automatable in the DAW
-- Fetch the synth's current sound, send sounds to its edit buffer
-- Real-time edits via CC, SysEx for parameters without CC, FREEZE
+- Fetch the synth's current sound, send sounds to its edit buffer; real-time edits via CC,
+  SysEx for parameters without CC, FREEZE
 - Lossless handling of patch data (undocumented values survive editing)
+- Preset library (banks, categories, tags, favorites, search, .syx import)
+- Synth memory view: read all slots, write by drag and drop with read-back
+- Patch generator with 8 categories, KEEP masks, variations and history
+- TEST phrase; All Sound Off before switching sounds
+- Plugin: sound is saved with the project and sent when it opens; one instance per synth
+  (others grey out, TAKE OVER by click); the track's notes are played on the synth
+- MIDI loop protection
+
+## Troubleshooting
+
+Problems such as a detected MIDI loop are written to `%TEMP%\SSO-ownership\ownership.log`.
+For step-by-step details (which instance owns the synth and why), create an empty file
+`%TEMP%\SSO-ownership\verbose` and restart the app or host.
 
 ## Layout
 

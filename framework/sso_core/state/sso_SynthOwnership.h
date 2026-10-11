@@ -57,7 +57,12 @@ public:
 
     static juce::String makeKey (const juce::String& deviceId, const juce::String& portId, int channel);
 
-    /** Appends to %TEMP%/SSO-ownership/ownership.log (diagnostics for host behaviour). */
+    /** Problems worth knowing about later (MIDI loop, failed take-over); always written to
+        %TEMP%/SSO-ownership/ownership.log. */
+    void warn (const juce::String&) const;
+
+    /** Step-by-step details for debugging host behaviour; only written while the file
+        %TEMP%/SSO-ownership/verbose exists (checked at startup). */
     void log (const juce::String&) const;
 
 private:
@@ -77,11 +82,13 @@ private:
     void notifyAll (const juce::String& key);
     juce::String keyOf (const Member&) const;
     juce::String describe (const Member&) const;
+    void write (const juce::String&) const;
 
     std::map<juce::String, Slot> slots;
     std::vector<std::pair<Member*, juce::String>> members;
     std::set<Member*> claimed;          // members that are in use (want the synth when free)
     const juce::String processToken = juce::Uuid().toString();
+    const bool verbose;
 
     JUCE_DECLARE_NON_COPYABLE (OwnershipRegistry)
 };

@@ -72,7 +72,7 @@ SynthController::SynthController (const DeviceDefinition& d, juce::AudioProcesso
     connection.onStateChanged = [this] { connectionChanged(); };
     connection.onLoopDetected = [this]
     {
-        registry->log ("MIDI loop detected - sending stopped");
+        registry->warn ("MIDI loop detected on '" + connection.getOutputId() + "' - sending stopped");
         sendChangeMessage();
     };
 

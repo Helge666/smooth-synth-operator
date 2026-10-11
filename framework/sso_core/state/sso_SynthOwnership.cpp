@@ -3,19 +3,35 @@ namespace sso
 
 static constexpr double takeOverTimeoutMs = 3000.0;
 
+static juce::File ownershipFolder()
+{
+    return juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("SSO-ownership");
+}
+
 OwnershipRegistry::OwnershipRegistry()
+    : verbose (ownershipFolder().getChildFile ("verbose").exists())
 {
     startTimer (200);
     log ("registry created");
 }
 
+void OwnershipRegistry::warn (const juce::String& message) const
+{
+    write (message);
+}
+
 void OwnershipRegistry::log (const juce::String& message) const
 {
-    // Diagnostics for host-specific behaviour: %TEMP%/SSO-ownership/ownership.log
-    auto f = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("SSO-ownership").getChildFile ("ownership.log");
+    if (verbose)
+        write (message);
+}
+
+void OwnershipRegistry::write (const juce::String& message) const
+{
+    auto f = ownershipFolder().getChildFile ("ownership.log");
     f.getParentDirectory().createDirectory();
 
-    if (f.getSize() > 512 * 1024)
+    if (f.getSize() > 256 * 1024)
         f.deleteFile();
 
     f.appendText (juce::Time::getCurrentTime().toString (true, true, true, true) + " [" + processToken.substring (0, 8) + "] "
@@ -47,8 +63,7 @@ juce::String OwnershipRegistry::makeKey (const juce::String& deviceId, const juc
 
 juce::File OwnershipRegistry::fileFor (const juce::String& key, const char* suffix) const
 {
-    return juce::File::getSpecialLocation (juce::File::tempDirectory)
-               .getChildFile ("SSO-ownership").getChildFile (key + suffix);
+    return ownershipFolder().getChildFile (key + suffix);
 }
 
 juce::String OwnershipRegistry::keyOf (const Member& m) const
@@ -330,7 +345,7 @@ void OwnershipRegistry::timerCallback()
             }
             else if (juce::Time::getMillisecondCounterHiRes() - slot.requestStarted > takeOverTimeoutMs)
             {
-                log ("  -> the other process did not release " + key + " (timeout)");
+                warn ("take over of " + key + ": the other process did not release it (timeout)");
                 request.deleteFile();
                 slot.requester = nullptr;
                 notifyAll (key);
