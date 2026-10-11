@@ -170,6 +170,7 @@ private:
     juce::String globalsSentTo;         // output the globals were last sent to (empty = not sent)
     bool globalsRequested = false;      // the next global dump replaces the stored values
     double probeSentMs = 0;             // 0 = no probe outstanding
+    bool probeUnanswered = false;       // the last probe timed out and nothing was heard since
     bool registered = false;
     juce::String registeredKey;
     juce::String description { "SSO" };

@@ -257,9 +257,19 @@ void SynthController::timerCallback()
     auto heard = connection.getLastHeardMs();
 
     if (probeSentMs > 0 && heard >= probeSentMs)
+    {
         probeSentMs = 0;                                    // answered
+        probeUnanswered = false;
+    }
+    else if (probeSentMs > 0 && now - probeSentMs > probeTimeoutMs)
+    {
+        probeUnanswered = true;
+    }
 
-    if (probeSentMs == 0 && now - heard > quietBeforeProbeMs)
+    // ask after 10 s of silence, and again every 10 s while there is no answer
+    auto lastActivity = juce::jmax (heard, probeSentMs);
+
+    if (now - lastActivity > quietBeforeProbeMs)
         probeSynth();
 
     if (getPresence() != before)
@@ -276,7 +286,7 @@ SynthController::Presence SynthController::getPresence() const
     if (now - connection.getLastHeardMs() < quietBeforeProbeMs + probeTimeoutMs)
         return Presence::present;
 
-    if (probeSentMs > 0 && now - probeSentMs > probeTimeoutMs)
+    if (probeUnanswered)
         return Presence::absent;
 
     return Presence::unknown;
