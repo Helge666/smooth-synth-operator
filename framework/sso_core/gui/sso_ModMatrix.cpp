@@ -36,7 +36,7 @@ struct ModMatrix::Cell : public juce::Component,
             return;
 
         auto on = value != 0;
-        g.setColour (on ? theme::yellow : theme::control);
+        g.setColour (on ? theme::accent : theme::control);
         g.fillRoundedRectangle (getLocalBounds().toFloat(), 3.0f);
         g.setColour (on ? theme::background : theme::textOff);
         g.setFont (theme::label (13.0f, true));

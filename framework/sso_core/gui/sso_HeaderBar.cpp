@@ -149,7 +149,7 @@ MidiSettingsPanel::MidiSettingsPanel (SynthController& c) : controller (c)
     forwardToggle.setToggleState (controller.getForwardNotes(), juce::dontSendNotification);
     forwardToggle.onClick = [this] { controller.setForwardNotes (forwardToggle.getToggleState()); };
     forwardToggle.setColour (juce::ToggleButton::textColourId, theme::text);
-    forwardToggle.setColour (juce::ToggleButton::tickColourId, theme::yellow);
+    forwardToggle.setColour (juce::ToggleButton::tickColourId, theme::accent);
     addAndMakeVisible (forwardToggle);
 
     offsetSlider.setSliderStyle (juce::Slider::LinearHorizontal);

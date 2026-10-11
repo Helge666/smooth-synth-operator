@@ -22,6 +22,17 @@ public:
     virtual int getNumSlots() const = 0;                 // stored sound memories
     virtual juce::String getSlotName (int slot) const = 0;
 
+    /** How the stored sounds are shown: banks, optional groups within a bank (selected like
+        the synth's first tone button), slots per group, tile columns. */
+    struct SlotLayout
+    {
+        int banks = 16, groupsPerBank = 1, slotsPerGroup = 16, columns = 4;
+    };
+
+    virtual SlotLayout getSlotLayout() const;
+    virtual juce::String getBankName (int bank) const;
+    virtual juce::String getGroupName (int group) const;
+
     const std::vector<ParamSpec>& getParams() const noexcept { return params; }
     int indexOf (const juce::String& paramId) const;
     juce::StringArray getSections() const;
@@ -51,6 +62,10 @@ public:
     virtual juce::MidiMessage createEditBufferDump (const MidiSettings&, const Patch&) const = 0;
     virtual juce::MidiMessage createSlotRequest (const MidiSettings&, int slot) const = 0;
     virtual juce::MidiMessage createSlotDump (const MidiSettings&, const Patch&, int slot) const = 0;
+
+    /** The patch as the synth will hold it after storing it (some firmwares replace values
+        when writing) - for verifying a write by reading it back. */
+    virtual Patch asStored (const Patch& p) const   { return p; }
 
     /** Parameters that must be re-sent individually after an edit-buffer dump because
         the hardware does not fully apply them from the dump. */

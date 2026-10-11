@@ -53,3 +53,5 @@
 #include "gui/sso_GeneratorPanel.h"
 #include "gui/sso_InactiveOverlay.h"
 #include "gui/sso_GenericParamPanel.h"
+#include "plugin/sso_ProgrammerProcessor.h"
+#include "plugin/sso_ProgrammerEditor.h"

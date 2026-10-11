@@ -29,6 +29,11 @@ struct ParamSpec
     int shift = 0;
     int bits = 7;
 
+    // Wide values (e.g. 12 bit): the field at `offset` holds the high bits, the 7-bit byte at
+    // `loOffset` the low bits. value = (high << 7) | low.
+    int loOffset = -1;
+    bool isWide() const noexcept     { return loOffset >= 0; }
+
     /** Optional mapping value -> stored field value, for when the synth's internal
         order differs from the display order. Empty = stored value equals value. */
     std::vector<int> storedValues;

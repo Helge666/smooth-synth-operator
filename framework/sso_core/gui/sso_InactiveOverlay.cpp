@@ -3,7 +3,7 @@ namespace sso
 
 InactiveOverlay::InactiveOverlay (SynthController& c) : controller (c)
 {
-    takeOverButton.setColour (juce::TextButton::buttonColourId, theme::yellow);
+    takeOverButton.setColour (juce::TextButton::buttonColourId, theme::accent);
     takeOverButton.setColour (juce::TextButton::textColourOffId, theme::background);
     takeOverButton.onClick = [this] { controller.takeOver(); update(); };
     addAndMakeVisible (takeOverButton);
@@ -47,7 +47,7 @@ void InactiveOverlay::paint (juce::Graphics& g)
     auto box = getLocalBounds().withSizeKeepingCentre (640, 220);
     g.setColour (theme::panel);
     g.fillRoundedRectangle (box.toFloat(), 8.0f);
-    g.setColour (theme::yellow);
+    g.setColour (theme::accent);
     g.fillRect (box.removeFromTop (6));
 
     auto r = box.reduced (28, 18);

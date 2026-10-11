@@ -3,7 +3,8 @@
 namespace sso
 {
 
-/** The synth's stored sounds as a bank selector plus 16 tiles.
+/** The synth's stored sounds: bank selector, optional group selector (e.g. KiwiSix 1-8 within
+    a bank, like the synth's first tone button) and one tile per sound.
     - click a tile: load that sound into the editor
     - drop a library preset on a tile: write it to that memory (after confirmation,
       verified by reading it back)
@@ -29,12 +30,18 @@ public:
 
     static constexpr const char* dragPrefix = "sso-preset:";
 
+    /** Height that fits the selectors, one group of tiles, status line and buttons. */
+    int getPreferredHeight() const;
+
 private:
-    int slotsPerBank() const noexcept { return 16; }
-    int numBanks() const;
+    int slotsPerBank() const noexcept   { return layout.groupsPerBank * layout.slotsPerGroup; }
+    int firstShownSlot() const noexcept { return bank * slotsPerBank() + group * layout.slotsPerGroup; }
     int slotAt (juce::Point<int>) const;
-    juce::Rectangle<int> tileBounds (int indexInBank) const;
+    int tilesTop() const noexcept;
+    juce::Rectangle<int> tileBounds (int indexInGroup) const;
     juce::Rectangle<int> bankButtonBounds (int bank) const;
+    juce::Rectangle<int> groupButtonBounds (int group) const;
+    void verifyWrite (const Preset&, int slot, int attempt);
 
     void loadSlotIntoEditor (int slot);
     void writePresetToSlot (const Preset&, int slot);
@@ -52,7 +59,8 @@ private:
     std::vector<std::optional<Patch>> cache;
     juce::Time cacheTime;
 
-    int bank = 0;
+    const DeviceDefinition::SlotLayout layout;
+    int bank = 0, group = 0;
     int hoverSlot = -1;
     juce::String status;
     juce::TextButton readButton { "READ ALL" }, importButton { "IMPORT BANK" };

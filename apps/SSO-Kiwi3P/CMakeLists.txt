@@ -16,6 +16,7 @@ juce_add_plugin(SSO_Kiwi3P
 target_sources(SSO_Kiwi3P PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
+    Source/PluginEntry.cpp
     Source/Kiwi3PPanel.cpp)
 
 target_compile_definitions(SSO_Kiwi3P PUBLIC
@@ -27,6 +28,7 @@ target_compile_definitions(SSO_Kiwi3P PUBLIC
 target_link_libraries(SSO_Kiwi3P
     PRIVATE
         sso_core
+        sso_kiwitechnics
         sso_kiwi3p
         juce::juce_audio_utils
     PUBLIC

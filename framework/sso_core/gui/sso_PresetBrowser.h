@@ -67,7 +67,6 @@ private:
     std::unique_ptr<juce::AlertWindow> dialog;
     juce::ScopedMessageBox messageBox;
 
-    static constexpr int memoryHeight = 330;
     static constexpr int rowHeight = 30;
 };
 

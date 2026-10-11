@@ -1,6 +1,9 @@
 #include <sso_kiwi3p/sso_kiwi3p.h>
+#include <sso_kiwisix/sso_kiwisix.h>
 
-/*  sso-cli - library maintenance from the command line (Kiwi-3P for now)
+/*  sso-cli - library maintenance from the command line
+
+    All commands take [--device kiwi3p|kiwisix] (default kiwi3p).
 
     sso-cli import <file.syx> --bank <name> [--slots A-1:B-16] [--skip-generic]
                               [--author <name>] [--root <library dir>]
@@ -30,7 +33,8 @@ namespace
         std::cout << "usage:\n"
                      "  sso-cli import <file.syx> --bank <name> [--slots A-1:B-16] [--skip-generic] [--author <name>] [--root <dir>]\n"
                      "  sso-cli list [--bank <name>] [--root <dir>]\n"
-                     "  sso-cli generate <category|all> --count <n> --out <file.syx> [--seed <n>]\n";
+                     "  sso-cli generate <category|all> --count <n> --out <file.syx> [--seed <n>]\n"
+                     "  all commands: [--device kiwi3p|kiwisix]\n";
         return 2;
     }
 }
@@ -43,7 +47,17 @@ int main (int argc, char* argv[])
     if (args.isEmpty())
         return usage();
 
-    sso::kiwi3p::Kiwi3PDevice device;
+    auto deviceName = option (args, "--device", "kiwi3p");
+    std::unique_ptr<sso::DeviceDefinition> devicePtr;
+
+    if (deviceName == "kiwisix")
+        devicePtr = std::make_unique<sso::kiwisix::KiwiSixDevice>();
+    else if (deviceName == "kiwi3p")
+        devicePtr = std::make_unique<sso::kiwi3p::Kiwi3PDevice>();
+    else
+        return usage();
+
+    auto& device = *devicePtr;
     auto rootArg = option (args, "--root");
     sso::PresetLibrary library (device, rootArg.isNotEmpty() ? juce::File (rootArg) : juce::File());
 
@@ -64,7 +78,9 @@ int main (int argc, char* argv[])
 
     if (args[0] == "generate" && args.size() >= 2)
     {
-        auto generator = sso::kiwi3p::createGenerator (device);
+        auto generator = deviceName == "kiwisix"
+                             ? sso::kiwisix::createGenerator (static_cast<const sso::kiwisix::KiwiSixDevice&> (device))
+                             : sso::kiwi3p::createGenerator (static_cast<const sso::kiwi3p::Kiwi3PDevice&> (device));
         auto categories = args[1] == "all" ? generator->getCategories() : juce::StringArray { args[1] };
         auto count = juce::jmax (1, option (args, "--count", "1").getIntValue());
         juce::Random random (option (args, "--seed", juce::String (juce::Time::currentTimeMillis())).getLargeIntValue());

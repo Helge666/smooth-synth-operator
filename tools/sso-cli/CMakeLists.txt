@@ -9,7 +9,9 @@ target_compile_definitions(SSO_CLI PRIVATE
 target_link_libraries(SSO_CLI
     PRIVATE
         sso_core
+        sso_kiwitechnics
         sso_kiwi3p
+        sso_kiwisix
         juce::juce_audio_utils
     PUBLIC
         juce::juce_recommended_config_flags

@@ -20,3 +20,5 @@
 #include "gui/sso_GeneratorPanel.cpp"
 #include "gui/sso_InactiveOverlay.cpp"
 #include "gui/sso_GenericParamPanel.cpp"
+#include "plugin/sso_ProgrammerProcessor.cpp"
+#include "plugin/sso_ProgrammerEditor.cpp"

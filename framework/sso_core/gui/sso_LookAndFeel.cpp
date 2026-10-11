@@ -9,7 +9,7 @@ LookAndFeel::LookAndFeel()
 
     setColour (juce::ResizableWindow::backgroundColourId, background);
     setColour (juce::TextButton::buttonColourId, control);
-    setColour (juce::TextButton::buttonOnColourId, yellow);
+    setColour (juce::TextButton::buttonOnColourId, accent);
     setColour (juce::TextButton::textColourOffId, text);
     setColour (juce::TextButton::textColourOnId, background);
     setColour (juce::Label::textColourId, text);
@@ -20,12 +20,12 @@ LookAndFeel::LookAndFeel()
     setColour (juce::TextEditor::backgroundColourId, control);
     setColour (juce::TextEditor::textColourId, text);
     setColour (juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
-    setColour (juce::TextEditor::focusedOutlineColourId, yellow.withAlpha (0.6f));
-    setColour (juce::TextEditor::highlightColourId, yellow.withAlpha (0.35f));
-    setColour (juce::CaretComponent::caretColourId, yellow);
+    setColour (juce::TextEditor::focusedOutlineColourId, accent.withAlpha (0.6f));
+    setColour (juce::TextEditor::highlightColourId, accent.withAlpha (0.35f));
+    setColour (juce::CaretComponent::caretColourId, accent);
     setColour (juce::PopupMenu::backgroundColourId, panel);
     setColour (juce::PopupMenu::textColourId, text);
-    setColour (juce::PopupMenu::highlightedBackgroundColourId, yellow);
+    setColour (juce::PopupMenu::highlightedBackgroundColourId, accent);
     setColour (juce::PopupMenu::highlightedTextColourId, background);
     setColour (juce::ListBox::backgroundColourId, juce::Colours::transparentBlack);
     setColour (juce::ListBox::outlineColourId, juce::Colours::transparentBlack);
@@ -34,7 +34,7 @@ LookAndFeel::LookAndFeel()
     setColour (juce::AlertWindow::textColourId, text);
     setColour (juce::AlertWindow::outlineColourId, outline);
     setColour (juce::Slider::backgroundColourId, slot);
-    setColour (juce::Slider::trackColourId, yellow);
+    setColour (juce::Slider::trackColourId, accent);
     setColour (juce::Slider::thumbColourId, faderCap);
     setColour (juce::TooltipWindow::backgroundColourId, background);
     setColour (juce::TooltipWindow::textColourId, text);
@@ -53,7 +53,7 @@ void LookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, int width, 
         g.fillRoundedRectangle (track, 2.0f);
 
         auto origin = slider.getProperties()["bipolar"] ? track.getCentreX() : track.getX();
-        g.setColour (theme::yellow);
+        g.setColour (theme::accent);
         g.fillRect (juce::Rectangle<float>::leftTopRightBottom (juce::jmin (origin, sliderPos), track.getY(),
                                                                 juce::jmax (origin, sliderPos), track.getBottom()));
 
@@ -95,6 +95,49 @@ void LookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, int width, 
     g.fillRect (cap.removeFromTop (2.0f));
     g.setColour (theme::background.withAlpha (0.7f));
     g.fillRect (cap.withSizeKeepingCentre (cap.getWidth() - 6.0f, 2.0f));
+}
+
+void LookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height, float pos,
+                                    float startAngle, float endAngle, juce::Slider& slider)
+{
+    // Vintage knob: value arc around a silver skirt with a cream cap and a dark pointer
+    auto bounds = juce::Rectangle<float> ((float) x, (float) y, (float) width, (float) height).reduced (2.0f);
+    auto size = juce::jmin (bounds.getWidth(), bounds.getHeight());
+    auto centre = bounds.getCentre();
+    auto arcRadius = size * 0.5f - 2.0f;
+    auto angle = startAngle + pos * (endAngle - startAngle);
+
+    juce::Path track;
+    track.addCentredArc (centre.x, centre.y, arcRadius, arcRadius, 0.0f, startAngle, endAngle, true);
+    g.setColour (theme::outline);
+    g.strokePath (track, juce::PathStrokeType (3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+    auto from = slider.getProperties()["bipolar"] ? (startAngle + endAngle) * 0.5f : startAngle;
+
+    if (std::abs (angle - from) > 0.01f)
+    {
+        juce::Path value;
+        value.addCentredArc (centre.x, centre.y, arcRadius, arcRadius, 0.0f, juce::jmin (from, angle), juce::jmax (from, angle), true);
+        g.setColour (theme::knobArc);
+        g.strokePath (value, juce::PathStrokeType (3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    }
+
+    auto skirt = juce::Rectangle<float> (size * 0.72f, size * 0.72f).withCentre (centre);
+    g.setColour (juce::Colours::black.withAlpha (0.35f));
+    g.fillEllipse (skirt.translated (0.0f, 2.0f));
+    g.setColour (theme::knobSkirt);
+    g.fillEllipse (skirt);
+    g.setColour (theme::knobSkirt.darker (0.4f));
+    g.drawEllipse (skirt.reduced (0.5f), 1.0f);
+
+    auto cap = skirt.reduced (size * 0.09f);
+    g.setColour (slider.isMouseOverOrDragging() ? theme::knobCap.brighter (0.08f) : theme::knobCap);
+    g.fillEllipse (cap);
+
+    auto inner = cap.getWidth() * 0.12f, outer = cap.getWidth() * 0.5f - 1.0f;
+    auto dir = juce::Point<float> (std::sin (angle), -std::cos (angle));
+    g.setColour (theme::knobPointer);
+    g.drawLine ({ centre + dir * inner, centre + dir * outer }, 2.6f);
 }
 
 void LookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour,

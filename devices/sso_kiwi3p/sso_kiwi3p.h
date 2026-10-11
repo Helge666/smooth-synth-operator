@@ -9,7 +9,7 @@
   license:            AGPLv3
   minimumCppStandard: 20
 
-  dependencies:       sso_core
+  dependencies:       sso_core sso_kiwitechnics
 
  END_JUCE_MODULE_DECLARATION
 *******************************************************************************/
@@ -18,6 +18,7 @@
 #define SSO_KIWI3P_H_INCLUDED
 
 #include <sso_core/sso_core.h>
+#include <sso_kiwitechnics/sso_kiwitechnics.h>
 
 #include "Kiwi3PDevice.h"
 #include "Kiwi3PGenerator.h"

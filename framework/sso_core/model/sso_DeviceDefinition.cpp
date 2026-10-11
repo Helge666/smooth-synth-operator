@@ -42,6 +42,10 @@ int DeviceDefinition::getValue (const Patch& patch, int paramIndex) const
         return s.defaultValue;
 
     auto stored = (patch.data[(size_t) s.offset] & fieldMask (s)) >> s.shift;
+
+    if (s.isWide() && juce::isPositiveAndBelow (s.loOffset, (int) patch.data.size()))
+        stored = (stored << 7) | (patch.data[(size_t) s.loOffset] & 0x7f);
+
     return s.fromStored (stored);
 }
 
@@ -52,9 +56,33 @@ void DeviceDefinition::setValue (Patch& patch, int paramIndex, int value) const
     if (! juce::isPositiveAndBelow (s.offset, (int) patch.data.size()))
         return;
 
+    auto stored = s.toStored (value);
+
+    if (s.isWide() && juce::isPositiveAndBelow (s.loOffset, (int) patch.data.size()))
+    {
+        patch.data[(size_t) s.loOffset] = (uint8_t) (stored & 0x7f);
+        stored >>= 7;
+    }
+
     auto& byte = patch.data[(size_t) s.offset];
     auto mask = fieldMask (s);
-    byte = (uint8_t) ((byte & ~mask) | ((s.toStored (value) << s.shift) & mask));
+    byte = (uint8_t) ((byte & ~mask) | ((stored << s.shift) & mask));
+}
+
+DeviceDefinition::SlotLayout DeviceDefinition::getSlotLayout() const
+{
+    return { getNumSlots() / 16, 1, 16, 4 };
+}
+
+juce::String DeviceDefinition::getBankName (int bank) const
+{
+    auto layout = getSlotLayout();
+    return getSlotName (bank * layout.groupsPerBank * layout.slotsPerGroup).upToFirstOccurrenceOf ("-", false, false);
+}
+
+juce::String DeviceDefinition::getGroupName (int group) const
+{
+    return juce::String (group + 1);
 }
 
 int DeviceDefinition::buildFieldByte (int offset, const std::function<int (int)>& valueOf) const

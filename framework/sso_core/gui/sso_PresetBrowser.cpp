@@ -175,7 +175,7 @@ void PresetBrowser::paintListBoxItem (int row, juce::Graphics& g, int width, int
 
     r.reduce (8, 0);
 
-    g.setColour (theme::yellow);
+    g.setColour (theme::accent);
     g.setFont (theme::label (14.0f));
     g.drawText (p->favorite ? favouritesChip : juce::String(), r.removeFromRight (16), juce::Justification::centredRight);
 
@@ -186,7 +186,7 @@ void PresetBrowser::paintListBoxItem (int row, juce::Graphics& g, int width, int
     if (filter.bank.isEmpty())
         g.drawText (p->bank, r.removeFromRight (80), juce::Justification::centredRight);
 
-    g.setColour (isCurrent ? theme::yellow : theme::text);
+    g.setColour (isCurrent ? theme::accent : theme::text);
     g.setFont (theme::label (15.0f, isCurrent));
     g.drawFittedText (p->name, r, juce::Justification::centredLeft, 1, 0.8f);
 }
@@ -389,7 +389,7 @@ void PresetBrowser::saveAs()
     banks.addIfNotAlreadyThere ("My Sounds");
     dialog->addComboBox ("bank", banks, "Bank");
     auto currentBank = controller.getPresetRef().bank;
-    dialog->getComboBoxComponent ("bank")->setText (currentBank.isNotEmpty() && currentBank != "Kiwi Factory" ? currentBank
+    dialog->getComboBoxComponent ("bank")->setText (currentBank.isNotEmpty() && ! currentBank.endsWithIgnoreCase ("Factory") ? currentBank
                                                                                                                : juce::String ("My Sounds"));
     dialog->getComboBoxComponent ("bank")->setEditableText (true);
 
@@ -499,7 +499,7 @@ void PresetBrowser::resized()
     layoutChips (bankButtons, 28);
     layoutChips (categoryButtons, 24);
 
-    auto bottom = getLocalBounds().removeFromBottom (memoryHeight);
+    auto bottom = getLocalBounds().removeFromBottom (memory.getPreferredHeight() + 20);
     memory.setBounds (bottom.reduced (10, 10));
 
     r.setBottom (bottom.getY());

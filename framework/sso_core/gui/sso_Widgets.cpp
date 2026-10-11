@@ -1,9 +1,43 @@
 namespace sso
 {
 
-void paintSectionFrame (juce::Graphics& g, juce::Rectangle<int> bounds, const juce::String& title, juce::Colour accent)
+void paintSectionFrame (juce::Graphics& g, juce::Rectangle<int> bounds, const juce::String& title, juce::Colour accent,
+                        const juce::String& subtitle)
 {
     auto r = bounds.toFloat();
+
+    if (theme::tabbedSections)
+    {
+        // PolySix style: panel field with a thin outline, title on a cream tab in the corner
+        g.setColour (theme::panel);
+        g.fillRoundedRectangle (r, 4.0f);
+        g.setColour (theme::sectionOutline);
+        g.drawRoundedRectangle (r.reduced (0.5f), 4.0f, 1.0f);
+
+        auto font = theme::label (15.0f, true).withExtraKerningFactor (0.18f);
+        auto text = title.toUpperCase();
+        auto tabWidth = juce::GlyphArrangement::getStringWidthInt (font, text) + 30;
+        auto tab = juce::Rectangle<float> (r.getX(), r.getY(), (float) tabWidth, (float) SectionPanel::titleHeight - 4.0f);
+
+        juce::Path p;
+        p.addRoundedRectangle (tab.getX(), tab.getY(), tab.getWidth(), tab.getHeight(), 4.0f, 4.0f, true, false, false, true);
+        g.setColour (theme::tabFill);
+        g.fillPath (p);
+        g.setColour (theme::tabText);
+        g.setFont (font);
+        g.drawText (text, tab, juce::Justification::centred);
+
+        if (subtitle.isNotEmpty())
+        {
+            g.setColour (theme::textDim);
+            g.setFont (theme::label (12.0f).withExtraKerningFactor (0.08f));
+            g.drawText (subtitle.toUpperCase(), tab.withX (tab.getRight() + 10.0f).withRight (r.getRight() - 8.0f),
+                        juce::Justification::centredLeft);
+        }
+
+        return;
+    }
+
     g.setColour (theme::panel);
     g.fillRoundedRectangle (r, 6.0f);
 
@@ -54,15 +88,50 @@ void FaderStrip::paint (juce::Graphics& g)
 }
 
 //==============================================================================
+KnobStrip::KnobStrip (const ParamSpec& s, juce::AudioProcessorValueTreeState& state, const juce::String& l)
+    : spec (s), label (l.isEmpty() ? s.name.toUpperCase() : l)
+{
+    slider.setSliderStyle (juce::Slider::RotaryVerticalDrag);
+    slider.setRotaryParameters (juce::degreesToRadians (-135.0f), juce::degreesToRadians (135.0f), true);
+    slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+    slider.setMouseDragSensitivity (220);
+    slider.setDoubleClickReturnValue (true, spec.defaultValue);
+    slider.getProperties().set ("bipolar", spec.kind == ParamSpec::Kind::bipolar);
+    slider.onValueChange = [this] { repaint(); };
+    addAndMakeVisible (slider);
+    attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (state, spec.id, slider);
+
+    setTooltip (spec.section + " " + spec.name + "  (drag up/down, double-click: default)");
+    slider.setTooltip (getTooltip());
+}
+
+void KnobStrip::resized()
+{
+    slider.setBounds (getLocalBounds().removeFromTop (knobSize).withSizeKeepingCentre (knobSize, knobSize));
+}
+
+void KnobStrip::paint (juce::Graphics& g)
+{
+    auto r = getLocalBounds().withTrimmedTop (knobSize + 2).removeFromTop (34);
+    g.setColour (theme::text);
+    g.setFont (theme::label (13.0f, true));
+    g.drawFittedText (label, r.removeFromTop (17), juce::Justification::centred, 1, 0.7f);
+    g.setColour (theme::textDim);
+    g.setFont (theme::label (13.0f));
+    g.drawFittedText (spec.toText (juce::roundToInt (slider.getValue())), r, juce::Justification::centred, 1, 0.7f);
+}
+
+//==============================================================================
 static constexpr int choiceButtonHeight = 26;
 static constexpr int choiceLabelHeight = 16;
 
 ChoiceButtons::ChoiceButtons (const ParamSpec& s, juce::AudioProcessorValueTreeState& state,
-                              const juce::String& l, const juce::StringArray& shortNames)
+                              const juce::String& l, const juce::StringArray& shortNames, int columns)
     : spec (s),
       label (l.isEmpty() ? s.name.toUpperCase() : l),
       names (! shortNames.isEmpty() ? shortNames
                                     : (s.kind == ParamSpec::Kind::toggle ? juce::StringArray { "OFF", "ON" } : s.choices)),
+      maxColumns (columns),
       attachment (*state.getParameter (s.id), [this] (float v) { current = juce::roundToInt (v); repaint(); })
 {
     attachment.sendInitialUpdate();
@@ -72,7 +141,8 @@ ChoiceButtons::ChoiceButtons (const ParamSpec& s, juce::AudioProcessorValueTreeS
 int ChoiceButtons::getColumns (int width) const
 {
     // as many as fit with a minimum button width of 36 px
-    return juce::jlimit (1, names.size(), (width + 3) / (36 + 3));
+    auto fit = juce::jlimit (1, names.size(), (width + 3) / (36 + 3));
+    return maxColumns > 0 ? juce::jmin (fit, maxColumns) : fit;
 }
 
 int ChoiceButtons::getPreferredHeight (int width) const
@@ -130,9 +200,82 @@ void ChoiceButtons::mouseDown (const juce::MouseEvent& e)
 }
 
 //==============================================================================
+ToggleGroup::ToggleGroup (const std::vector<const ParamSpec*>& specs, juce::AudioProcessorValueTreeState& state,
+                          const juce::String& l, const juce::StringArray& n)
+    : label (l), names (n)
+{
+    states.resize (specs.size(), 0);
+    juce::StringArray tips;
+
+    for (size_t i = 0; i < specs.size(); ++i)
+    {
+        attachments.push_back (std::make_unique<juce::ParameterAttachment> (*state.getParameter (specs[i]->id),
+            [this, i] (float v) { states[i] = juce::roundToInt (v); repaint(); }));
+        attachments.back()->sendInitialUpdate();
+        tips.add (specs[i]->name);
+    }
+
+    if (! specs.empty())
+        setTooltip (specs.front()->section + ": " + tips.joinIntoString (", ") + " (each on/off)");
+}
+
+int ToggleGroup::getPreferredHeight (int) const
+{
+    return choiceLabelHeight + choiceButtonHeight + 3;
+}
+
+juce::Rectangle<int> ToggleGroup::getButtonBounds (int index, int width) const
+{
+    auto n = juce::jmax (1, names.size());
+    auto w = (width - (n - 1) * 3) / n;
+    return { index * (w + 3), choiceLabelHeight, w, choiceButtonHeight };
+}
+
+void ToggleGroup::paint (juce::Graphics& g)
+{
+    g.setColour (theme::textDim);
+    g.setFont (theme::label (12.0f));
+    g.drawText (label, 0, 0, getWidth(), choiceLabelHeight - 2, juce::Justification::bottomLeft);
+
+    for (int i = 0; i < names.size() && i < (int) states.size(); ++i)
+    {
+        auto b = getButtonBounds (i, getWidth()).toFloat();
+        auto on = states[(size_t) i] != 0;
+
+        g.setColour (theme::control);
+        g.fillRoundedRectangle (b, 3.0f);
+
+        auto led = juce::Rectangle<float> (b.getX() + 6.0f, b.getCentreY() - 3.5f, 7.0f, 7.0f);
+        g.setColour (on ? theme::ledOn : theme::ledOff);
+        g.fillEllipse (led);
+
+        if (on)
+        {
+            g.setColour (theme::ledOn.withAlpha (0.25f));
+            g.fillEllipse (led.expanded (3.0f));
+        }
+
+        g.setColour (on ? theme::text : theme::textDim);
+        g.setFont (theme::label (13.0f, true));
+        g.drawFittedText (names[i], b.withTrimmedLeft (16.0f).withTrimmedRight (3.0f).toNearestInt(),
+                          juce::Justification::centred, 1, 0.6f);
+    }
+}
+
+void ToggleGroup::mouseDown (const juce::MouseEvent& e)
+{
+    for (int i = 0; i < names.size() && i < (int) attachments.size(); ++i)
+        if (getButtonBounds (i, getWidth()).contains (e.getPosition()))
+            attachments[(size_t) i]->setValueAsCompleteGesture (states[(size_t) i] != 0 ? 0.0f : 1.0f);
+}
+
+//==============================================================================
 EnvelopeGraph::EnvelopeGraph (const SynthController& c, std::array<int, 4> adsr)
     : controller (c), indices (adsr)
 {
+    for (size_t i = 0; i < 4; ++i)
+        maxValues[i] = juce::jmax (1, c.getDevice().getParams()[(size_t) adsr[i]].maxValue);
+
     startTimerHz (20);
 }
 
@@ -157,17 +300,19 @@ void EnvelopeGraph::paint (juce::Graphics& g)
     g.fillRoundedRectangle (r, 4.0f);
 
     auto area = r.reduced (6.0f, 6.0f);
-    auto unit = area.getWidth() / (3.0f * 127.0f + 40.0f);   // A, D, R share the width, sustain plateau fixed
-    auto a = (float) shown[0] * unit, d = (float) shown[1] * unit, rel = (float) shown[3] * unit;
-    auto sustainY = area.getBottom() - (float) shown[2] / 127.0f * area.getHeight();
+    auto norm = [this] (size_t i) { return (float) shown[i] / (float) maxValues[i]; };
+    auto unit = area.getWidth() / (3.0f + 40.0f / 127.0f);   // A, D, R share the width, sustain plateau fixed
+    auto a = norm (0) * unit, d = norm (1) * unit, rel = norm (3) * unit;
+    auto sustainY = area.getBottom() - norm (2) * area.getHeight();
     auto x0 = area.getX(), bottom = area.getBottom();
 
     juce::Path p;
     p.startNewSubPath (x0, bottom);
     p.lineTo (x0 + a, area.getY());
     p.lineTo (x0 + a + d, sustainY);
-    p.lineTo (x0 + a + d + 40.0f * unit, sustainY);
-    p.lineTo (x0 + a + d + 40.0f * unit + rel, bottom);
+    auto plateau = 40.0f / 127.0f * unit;
+    p.lineTo (x0 + a + d + plateau, sustainY);
+    p.lineTo (x0 + a + d + plateau + rel, bottom);
 
     g.setColour (theme::lcdText);
     g.strokePath (p, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
@@ -183,7 +328,13 @@ SectionPanel::SectionPanel (const SectionDef& d, SynthController& controller, ju
     {
         auto index = device.indexOf (f.id);
         jassert (index >= 0);
-        faders.push_back (std::make_unique<FaderStrip> (device.getParams()[(size_t) index], state, f.label));
+        auto& spec = device.getParams()[(size_t) index];
+
+        if (def.knobs)
+            faders.push_back (std::make_unique<KnobStrip> (spec, state, f.label));
+        else
+            faders.push_back (std::make_unique<FaderStrip> (spec, state, f.label));
+
         addAndMakeVisible (*faders.back());
     }
 
@@ -191,8 +342,23 @@ SectionPanel::SectionPanel (const SectionDef& d, SynthController& controller, ju
     {
         auto index = device.indexOf (s.id);
         jassert (index >= 0);
-        selectors.push_back (std::make_unique<ChoiceButtons> (device.getParams()[(size_t) index], state, s.label, s.shortNames));
+        selectors.push_back (std::make_unique<ChoiceButtons> (device.getParams()[(size_t) index], state, s.label, s.shortNames, s.columns));
         addAndMakeVisible (*selectors.back());
+    }
+
+    for (auto& t : def.toggles)
+    {
+        std::vector<const ParamSpec*> specs;
+
+        for (auto& id : t.ids)
+        {
+            auto index = device.indexOf (id);
+            jassert (index >= 0);
+            specs.push_back (&device.getParams()[(size_t) index]);
+        }
+
+        toggles.push_back (std::make_unique<ToggleGroup> (specs, state, t.label, t.names));
+        addAndMakeVisible (*toggles.back());
     }
 
     if (def.envelope[0].isNotEmpty())
@@ -209,14 +375,20 @@ SectionPanel::SectionPanel (const SectionDef& d, SynthController& controller, ju
 
 void SectionPanel::paint (juce::Graphics& g)
 {
-    paintSectionFrame (g, getLocalBounds(), def.title, def.accent);
+    paintSectionFrame (g, getLocalBounds(), def.title, def.accent, def.subtitle);
+}
+
+int SectionPanel::stripWidth() const noexcept
+{
+    return def.knobs ? KnobStrip::preferredWidth + KnobStrip::spacing
+                     : FaderStrip::preferredWidth + FaderStrip::spacing;
 }
 
 int SectionPanel::getPreferredWidth() const
 {
-    auto w = 24 + (int) faders.size() * (FaderStrip::preferredWidth + FaderStrip::spacing);
+    auto w = 24 + (int) faders.size() * stripWidth();
 
-    if (! selectors.empty() || graph != nullptr)
+    if (! selectors.empty() || ! toggles.empty() || graph != nullptr)
         w += (faders.empty() ? 0 : 8) + def.selectorWidth;
 
     return w;
@@ -224,12 +396,16 @@ int SectionPanel::getPreferredWidth() const
 
 void SectionPanel::resized()
 {
-    auto r = getLocalBounds().withTrimmedTop (titleHeight).reduced (12, 0).withTrimmedBottom (10);
+    auto r = getLocalBounds().withTrimmedTop (titleHeight + (def.knobs ? 8 : 0)).reduced (12, 0).withTrimmedBottom (10);
+    auto spacing = def.knobs ? KnobStrip::spacing : FaderStrip::spacing;
 
-    auto faderArea = r.removeFromLeft ((int) faders.size() * (FaderStrip::preferredWidth + FaderStrip::spacing));
+    auto faderArea = r.removeFromLeft ((int) faders.size() * stripWidth());
 
     for (auto& f : faders)
-        f->setBounds (faderArea.removeFromLeft (FaderStrip::preferredWidth + FaderStrip::spacing).withTrimmedRight (FaderStrip::spacing));
+    {
+        auto strip = faderArea.removeFromLeft (stripWidth()).withTrimmedRight (spacing);
+        f->setBounds (def.knobs ? strip.withHeight (KnobStrip::knobSize + 38) : strip);
+    }
 
     if (! faders.empty())
         r.removeFromLeft (8);
@@ -243,6 +419,12 @@ void SectionPanel::resized()
     for (auto& s : selectors)
     {
         s->setBounds (r.removeFromTop (s->getPreferredHeight (r.getWidth())));
+        r.removeFromTop (6);
+    }
+
+    for (auto& t : toggles)
+    {
+        t->setBounds (r.removeFromTop (t->getPreferredHeight (r.getWidth())));
         r.removeFromTop (6);
     }
 }

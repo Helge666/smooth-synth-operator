@@ -5,9 +5,6 @@ using Kind = ParamSpec::Kind;
 
 namespace
 {
-    // F0 [00 21 16] KiwiTechnics, [60] Kiwi, [01] 3P, [dev] [cmd] ... F7
-    constexpr uint8_t sysexHeader[] = { 0x00, 0x21, 0x16, 0x60, 0x01 };
-
     // CC values in the middle of the ranges the firmware decodes for 2/3/4/6/7-way switches
     const std::vector<int> cc2  { 0, 127 };
     const std::vector<int> cc3  { 16, 48, 96 };
@@ -91,7 +88,7 @@ namespace
     }
 }
 
-Kiwi3PDevice::Kiwi3PDevice()
+Kiwi3PDevice::Kiwi3PDevice() : KiwiTechnicsDevice (0x01)    // F0 00 21 16 60 [01] = 3P
 {
     auto& p = params;
 
@@ -227,47 +224,7 @@ Patch Kiwi3PDevice::createInitPatch() const
     return p;
 }
 
-juce::String Kiwi3PDevice::getPatchName (const Patch& p) const
-{
-    juce::String name;
-
-    for (int i = 0; i < nameLength && i < (int) p.data.size(); ++i)
-    {
-        auto c = p.data[(size_t) i];
-        name << juce::String::charToString ((juce::juce_wchar) (c >= 32 && c < 127 ? c : ' '));
-    }
-
-    return name.trimEnd();
-}
-
-void Kiwi3PDevice::setPatchName (Patch& p, const juce::String& name) const
-{
-    if (p.data.size() < (size_t) nameLength)
-        return;
-
-    for (int i = 0; i < nameLength; ++i)
-    {
-        auto c = i < name.length() ? (int) name[i] : ' ';
-        p.data[(size_t) i] = (uint8_t) (c >= 32 && c < 127 ? c : '?');
-    }
-}
-
 //==============================================================================
-juce::MidiMessage Kiwi3PDevice::createSysEx (const MidiSettings& settings, uint8_t command,
-                                             std::initializer_list<uint8_t> payload, const Patch* patch)
-{
-    std::vector<uint8_t> data (std::begin (sysexHeader), std::end (sysexHeader));
-    data.push_back ((uint8_t) (settings.deviceId & 0x0f));
-    data.push_back (command);
-    data.insert (data.end(), payload.begin(), payload.end());
-
-    if (patch != nullptr)
-        for (auto b : patch->data)
-            data.push_back ((uint8_t) (b & 0x7f));
-
-    return juce::MidiMessage::createSysExMessage (data.data(), (int) data.size());
-}
-
 std::vector<juce::MidiMessage> Kiwi3PDevice::createParamMessages (const MidiSettings& settings, int paramIndex,
                                                                   const std::function<int (int)>& valueOf) const
 {
@@ -280,61 +237,11 @@ std::vector<juce::MidiMessage> Kiwi3PDevice::createParamMessages (const MidiSett
     return { createSysEx (settings, editBufferParameter, { (uint8_t) spec.offset, (uint8_t) byte }) };
 }
 
-juce::MidiMessage Kiwi3PDevice::createEditBufferRequest (const MidiSettings& s) const
-{
-    return createSysEx (s, requestEditBuffer, {});
-}
-
-juce::MidiMessage Kiwi3PDevice::createEditBufferDump (const MidiSettings& s, const Patch& patch) const
-{
-    jassert (patch.data.size() == (size_t) patchSize);
-    return createSysEx (s, editBufferDump, { 0, 0 }, &patch);
-}
-
-juce::MidiMessage Kiwi3PDevice::createSlotRequest (const MidiSettings& s, int slot) const
-{
-    return createSysEx (s, requestTone, { (uint8_t) (slot >> 7), (uint8_t) (slot & 0x7f) });
-}
-
-juce::MidiMessage Kiwi3PDevice::createSlotDump (const MidiSettings& s, const Patch& patch, int slot) const
-{
-    jassert (patch.data.size() == (size_t) patchSize && juce::isPositiveAndBelow (slot, numSlots));
-    return createSysEx (s, toneDump, { (uint8_t) (slot >> 7), (uint8_t) (slot & 0x7f) }, &patch);
-}
-
 std::vector<int> Kiwi3PDevice::getParamsToRefreshAfterDump() const
 {
     // Measured: after an edit-buffer dump the DCO footage switch can keep its previous
     // position until it is sent again.
     return { indexOf ("dco1_range"), indexOf ("dco1_wave"), indexOf ("dco2_range"), indexOf ("dco2_wave") };
-}
-
-std::optional<DeviceDefinition::IncomingPatch> Kiwi3PDevice::parsePatchDump (const MidiSettings& s, const juce::MidiMessage& m) const
-{
-    if (! m.isSysEx())
-        return std::nullopt;
-
-    auto* d = m.getSysExData();
-    auto size = m.getSysExDataSize();
-    constexpr int headerSize = (int) sizeof (sysexHeader);
-
-    if (size != headerSize + 2 + 2 + patchSize || std::memcmp (d, sysexHeader, sizeof (sysexHeader)) != 0)
-        return std::nullopt;
-
-    if ((d[headerSize] & 0x0f) != (s.deviceId & 0x0f))
-        return std::nullopt;
-
-    auto command = d[headerSize + 1];
-    IncomingPatch result;
-
-    if (command == toneDump)
-        result.slot = (d[headerSize + 2] << 7) | d[headerSize + 3];
-    else if (command != editBufferDump)
-        return std::nullopt;
-
-    auto* data = d + headerSize + 4;
-    result.patch.data.assign (data, data + patchSize);
-    return result;
 }
 
 } // namespace sso::kiwi3p

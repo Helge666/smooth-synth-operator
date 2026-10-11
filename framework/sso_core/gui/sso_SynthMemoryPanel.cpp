@@ -2,7 +2,7 @@ namespace sso
 {
 
 SynthMemoryPanel::SynthMemoryPanel (PresetLibrary& lib, SynthController& c)
-    : library (lib), controller (c), reader (c)
+    : library (lib), controller (c), reader (c), layout (c.getDevice().getSlotLayout())
 {
     cache.resize ((size_t) controller.getDevice().getNumSlots());
     loadCache();
@@ -22,33 +22,51 @@ SynthMemoryPanel::~SynthMemoryPanel()
     reader.cancel();
 }
 
-int SynthMemoryPanel::numBanks() const
+static juce::Rectangle<int> buttonInRow (juce::Rectangle<int> row, int index, int count)
 {
-    return controller.getDevice().getNumSlots() / slotsPerBank();
+    auto w = (float) row.getWidth() / (float) count;
+    return juce::Rectangle<float> ((float) row.getX() + (float) index * w, (float) row.getY(), w, (float) row.getHeight())
+               .reduced (1.0f, 0.0f).toNearestInt();
 }
 
 juce::Rectangle<int> SynthMemoryPanel::bankButtonBounds (int b) const
 {
     auto r = getLocalBounds().reduced (12, 0).withTrimmedTop (headerHeight).withHeight (bankRowHeight);
-    auto w = (float) r.getWidth() / (float) numBanks();
-    return juce::Rectangle<float> ((float) r.getX() + (float) b * w, (float) r.getY(), w, (float) r.getHeight())
-               .reduced (1.0f, 0.0f).toNearestInt();
+    return buttonInRow (r, b, layout.banks);
+}
+
+juce::Rectangle<int> SynthMemoryPanel::groupButtonBounds (int g) const
+{
+    auto r = getLocalBounds().reduced (12, 0).withTrimmedTop (headerHeight + bankRowHeight + 4).withHeight (bankRowHeight);
+    return buttonInRow (r, g, layout.groupsPerBank);
+}
+
+int SynthMemoryPanel::getPreferredHeight() const
+{
+    auto rows = (layout.slotsPerGroup + layout.columns - 1) / juce::jmax (1, layout.columns);
+    return tilesTop() + rows * (tileHeight + 4) + 4 + 62;
+}
+
+int SynthMemoryPanel::tilesTop() const noexcept
+{
+    return headerHeight + bankRowHeight + 6 + (layout.groupsPerBank > 1 ? bankRowHeight + 4 : 0);
 }
 
 juce::Rectangle<int> SynthMemoryPanel::tileBounds (int i) const
 {
-    auto r = getLocalBounds().reduced (12, 0).withTrimmedTop (headerHeight + bankRowHeight + 6);
-    auto w = (float) r.getWidth() / 4.0f;
-    return juce::Rectangle<float> ((float) r.getX() + (float) (i % 4) * w, (float) r.getY() + (float) (i / 4) * (tileHeight + 4),
+    auto r = getLocalBounds().reduced (12, 0).withTrimmedTop (tilesTop());
+    auto columns = juce::jmax (1, layout.columns);
+    auto w = (float) r.getWidth() / (float) columns;
+    return juce::Rectangle<float> ((float) r.getX() + (float) (i % columns) * w, (float) r.getY() + (float) (i / columns) * (tileHeight + 4),
                                    w, (float) tileHeight)
                .reduced (2.0f, 0.0f).toNearestInt();
 }
 
 int SynthMemoryPanel::slotAt (juce::Point<int> p) const
 {
-    for (int i = 0; i < slotsPerBank(); ++i)
+    for (int i = 0; i < layout.slotsPerGroup; ++i)
         if (tileBounds (i).contains (p))
-            return bank * slotsPerBank() + i;
+            return firstShownSlot() + i;
 
     return -1;
 }
@@ -58,24 +76,30 @@ void SynthMemoryPanel::paint (juce::Graphics& g)
     paintSectionFrame (g, getLocalBounds(), "Synth memory", theme::orange);
     auto& device = controller.getDevice();
 
-    for (int b = 0; b < numBanks(); ++b)
+    auto selectorButton = [&g] (juce::Rectangle<int> r, bool selected, const juce::String& text)
     {
-        auto r = bankButtonBounds (b);
-        g.setColour (b == bank ? theme::orange : theme::control);
+        g.setColour (selected ? theme::orange : theme::control);
         g.fillRoundedRectangle (r.toFloat(), 3.0f);
-        g.setColour (b == bank ? theme::background : theme::text);
+        g.setColour (selected ? theme::background : theme::text);
         g.setFont (theme::label (13.0f, true));
-        g.drawText (device.getSlotName (b * slotsPerBank()).upToFirstOccurrenceOf ("-", false, false), r, juce::Justification::centred);
-    }
+        g.drawText (text, r, juce::Justification::centred);
+    };
 
-    for (int i = 0; i < slotsPerBank(); ++i)
+    for (int b = 0; b < layout.banks; ++b)
+        selectorButton (bankButtonBounds (b), b == bank, device.getBankName (b));
+
+    if (layout.groupsPerBank > 1)
+        for (int gr = 0; gr < layout.groupsPerBank; ++gr)
+            selectorButton (groupButtonBounds (gr), gr == group, device.getBankName (bank) + device.getGroupName (gr));
+
+    for (int i = 0; i < layout.slotsPerGroup; ++i)
     {
-        auto slot = bank * slotsPerBank() + i;
+        auto slot = firstShownSlot() + i;
         auto r = tileBounds (i);
         auto& patch = cache[(size_t) slot];
         auto hover = slot == hoverSlot;
 
-        g.setColour (hover ? theme::yellow : theme::control);
+        g.setColour (hover ? theme::accent : theme::control);
         g.fillRoundedRectangle (r.toFloat(), 3.0f);
 
         auto inner = r.reduced (6, 4);
@@ -110,13 +134,26 @@ void SynthMemoryPanel::setStatus (const juce::String& s)
 
 void SynthMemoryPanel::mouseDown (const juce::MouseEvent& e)
 {
-    for (int b = 0; b < numBanks(); ++b)
+    for (int b = 0; b < layout.banks; ++b)
     {
         if (bankButtonBounds (b).contains (e.getPosition()))
         {
             bank = b;
             repaint();
             return;
+        }
+    }
+
+    if (layout.groupsPerBank > 1)
+    {
+        for (int gr = 0; gr < layout.groupsPerBank; ++gr)
+        {
+            if (groupButtonBounds (gr).contains (e.getPosition()))
+            {
+                group = gr;
+                repaint();
+                return;
+            }
         }
     }
 
@@ -188,31 +225,47 @@ void SynthMemoryPanel::writePresetToSlot (const Preset& preset, int slot)
         if (result != 1)    // first button = 1, cancel/close = 0
             return;
 
-        controller.writePatchToSlot (preset.patch, slot);
         setStatus ("Writing " + slotName + "...");
+        verifyWrite (preset, slot, 1);
+    });
+}
 
-        juce::Timer::callAfterDelay (400, [weak = juce::Component::SafePointer<SynthMemoryPanel> (this), preset, slot, slotName]
+void SynthMemoryPanel::verifyWrite (const Preset& preset, int slot, int attempt)
+{
+    // Writes are read back. A wrong result is written once more: the KiwiSix stores a few
+    // sounds incorrectly on the first write and correctly on the second.
+    controller.writePatchToSlot (preset.patch, slot);
+    auto slotName = controller.getDevice().getSlotName (slot);
+    auto expected = controller.getDevice().asStored (preset.patch);
+    auto before = cache[(size_t) slot];
+
+    juce::Timer::callAfterDelay (400, [weak = juce::Component::SafePointer<SynthMemoryPanel> (this), preset, slot, slotName,
+                                       expected, before, attempt]
+    {
+        if (weak == nullptr)
+            return;
+
+        weak->reader.start ({ slot }, nullptr, [weak, preset, slot, slotName, expected, before, attempt] (BankReader::Result r, bool complete)
         {
             if (weak == nullptr)
                 return;
 
-            weak->reader.start ({ slot }, nullptr, [weak, preset, slot, slotName] (BankReader::Result r, bool complete)
-            {
-                if (weak == nullptr)
-                    return;
+            if (complete && ! r.empty())
+                weak->cache[(size_t) slot] = r.front().patch;
 
-                if (complete && ! r.empty())
-                    weak->cache[(size_t) slot] = r.front().patch;
+            weak->saveCache();
+            auto readBack = complete && ! r.empty() ? std::optional<Patch> (r.front().patch) : std::nullopt;
 
-                weak->saveCache();
-
-                if (complete && ! r.empty() && r.front().patch == preset.patch)
-                    weak->setStatus ("Stored \"" + preset.name + "\" in " + slotName);
-                else if (complete)
-                    weak->setStatus (slotName + " unchanged - is memory protect switched off?");
-                else
-                    weak->setStatus ("Could not verify " + slotName + " (no answer)");
-            });
+            if (readBack.has_value() && *readBack == expected)
+                weak->setStatus ("Stored \"" + preset.name + "\" in " + slotName);
+            else if (readBack.has_value() && before.has_value() && *readBack == *before && ! (expected == *before))
+                weak->setStatus (slotName + " unchanged - is the synth's memory protect (Write) switch on Enable?");
+            else if (readBack.has_value() && attempt < 2)
+                weak->verifyWrite (preset, slot, attempt + 1);
+            else if (readBack.has_value())
+                weak->setStatus (slotName + " not stored correctly - memory protect on?");
+            else
+                weak->setStatus ("Could not verify " + slotName + " (no answer)");
         });
     });
 }

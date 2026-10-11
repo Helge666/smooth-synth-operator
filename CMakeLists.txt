@@ -10,8 +10,11 @@ add_subdirectory(external/JUCE)
 
 # SSO framework and device modules (JUCE module format)
 juce_add_module(framework/sso_core)
+juce_add_module(devices/sso_kiwitechnics)
 juce_add_module(devices/sso_kiwi3p)
+juce_add_module(devices/sso_kiwisix)
 
 add_subdirectory(apps/SSO-Kiwi3P)
+add_subdirectory(apps/SSO-KiwiSix)
 add_subdirectory(tools/sso-cli)
 add_subdirectory(tests)
