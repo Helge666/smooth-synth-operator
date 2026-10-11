@@ -86,8 +86,8 @@ namespace
     RuleSet bass()
     {
         RuleSet r;
-        // Like the factory basses: 8' plus sub one octave down, a long filter decay, the amp
-        // either following the envelope with sustain or held by the gate.
+        // Like the factory basses: 8' plus sub one octave down and a long filter decay. Mostly
+        // little sustain and a short release - with much sustain they turn into pads.
         r["vco_octave"] = pick ({ { oct8, 0.85f }, { oct16, 0.15f } });
         r["vco_wave"] = pick ({ { saw, 0.55f }, { pw, 0.45f } });
         r["pw_pwm"] = range (30, 70);
@@ -97,9 +97,9 @@ namespace
         r["eg_int"] = bipolar (32, 60);
         r["kbd_track"] = range (60, 120);
         r["vca_level"] = rawRange (2000, 2400);
-        r["vca_mode"] = pick ({ { eg, 0.65f }, { gate, 0.35f } });
-        envelope (r, range (0, 2), range (57, 99), pickSteps ({ { 0, 0.35f }, { 76, 0.25f }, { 95, 0.25f }, { 115, 0.15f } }),
-                  pickSteps ({ { 0, 0.4f }, { 50, 0.3f }, { 65, 0.3f } }));
+        r["vca_mode"] = pick ({ { eg, 0.9f }, { gate, 0.1f } });
+        envelope (r, range (0, 2), range (57, 95), pickSteps ({ { 0, 0.55f }, { 32, 0.25f }, { 50, 0.2f } }),
+                  pickSteps ({ { 0, 0.5f }, { 25, 0.3f }, { 40, 0.2f } }));
         r["mg_level"] = raw (0);
         r["key_assign"] = pick ({ { poly1, 0.6f }, { unison, 0.4f } });
         r["fx_type"] = pick ({ { fxOff, 0.65f }, { phase, 0.2f }, { chorus, 0.15f } });

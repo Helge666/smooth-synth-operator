@@ -100,9 +100,9 @@ public:
             expectEquals ((int) patch.data[0x36], 0x02 | (2 << 3));
 
             device.setValue (patch, device.indexOf ("fx_type"), 3);                 // ensemble
-            expectEquals ((int) patch.data[0x39], 2);
-            device.setValue (patch, device.indexOf ("fx_type"), 1);                 // chorus
             expectEquals ((int) patch.data[0x39], 4);
+            device.setValue (patch, device.indexOf ("fx_type"), 1);                 // chorus (panel switch -> 1)
+            expectEquals ((int) patch.data[0x39], 1);
             expectEquals ((int) patch.data[0x42], 7, "init patch as the firmware stores it");
         }
 
@@ -183,7 +183,7 @@ public:
             auto wave = device.createParamMessages (midi, device.indexOf ("vco_wave"), values ({ { "vco_wave", 2 } }));
             expect (wave.size() == 1 && wave[0].isControllerOfType (9) && wave[0].getControllerValue() == 96);
             auto fx = device.createParamMessages (midi, device.indexOf ("fx_type"), values ({ { "fx_type", 2 } }));
-            expect (fx.size() == 1 && fx[0].isControllerOfType (118) && fx[0].getControllerValue() == 48);   // phase
+            expect (fx.size() == 1 && fx[0].isControllerOfType (118) && fx[0].getControllerValue() == 80);   // phase
             auto gate = device.createParamMessages (midi, device.indexOf ("vca_mode"), values ({ { "vca_mode", 1 } }));
             expect (gate.size() == 1 && gate[0].isControllerOfType (61) && gate[0].getControllerValue() < 64);
 
@@ -255,7 +255,8 @@ public:
                 auto patchName = device.getPatchName (p);
                 expect (patchName.isNotEmpty() && patchName.length() <= KiwiSixDevice::nameLength, what + " name " + patchName);
 
-                if (cat == "Bass")      expect (get (p, "vco_octave") <= 1 && get (p, "eg_decay") >= 57 * step, what + " not a full bass");
+                if (cat == "Bass")      expect (get (p, "vco_octave") <= 1 && get (p, "eg_decay") >= 57 * step
+                                                 && get (p, "eg_sustain") <= 50 * step, what + " not a bass");
                 if (cat == "Pads")      expect (get (p, "eg_attack") >= 40 * step, what + " pad without slow attack");
                 if (cat == "Keys")      expect (get (p, "eg_attack") <= 2 * step, what + " keys with slow attack");
                 if (cat == "Bells")     expect (get (p, "eg_sustain") <= 20 * step, what + " bells sustain");

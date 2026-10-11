@@ -53,7 +53,7 @@ Bytes 0–19 ASCII name. 12-bit values are stored as hi (5 bits) / lo (7 bits) b
 | 30–35 | MG frequency, delay, level (12 bit each) |
 | 36 | MG: bits 0–2 destinations **VCO = 1, VCF = 2, VCA = 4** (manual: reversed); bits 3–5 MG wave (Tri, Sqr, Saw, RevSaw, Random) — not in the manual |
 | 37/38 | effect speed/intensity (12 bit) |
-| 39 | effect flags as in the manual's tone table: 4 chorus, 2 ensemble, 1 phase (the factory "Strings" hold 2 = ensemble, like the original PolySix preset) |
+| 39 | effect: 0 off, **1 chorus, 2 phase, 4 ensemble** (verified with the panel switch; the manual's tone table lists the flags in another order) |
 | 3A | key assign 0 = Poly 1, 1 = Poly 2, 2 = Unison |
 | 3B | arpeggiator range 0–3 (only the low bits are stored) |
 | 3C | bit0 = hold |
@@ -81,7 +81,7 @@ CC values set the **upper 7 bits** of 12-bit parameters (lower 5 bits stay). Ver
 | 41 | cutoff | 104 | key assign |
 | 42 | resonance | 109 | arp range (32 per step, 0–31 = off) |
 | 43 | keyboard track | 110 / 111 | arp / sequencer clock divide (10 per step) |
-| 118 | effect type: 0–31 off, 32–63 → 1, 64–95 → 2, 96–127 → 4, i.e. phase, ensemble, chorus (the manual's CC table lists chorus, phase, ensemble) | | |
+| 118 | effect type: 0–31 off, 32–63 chorus, 64–95 phase, 96–127 ensemble | | |
 
 No effect: CC 108 (arp mode), CC 117. The arp mode is not part of the tone.
 

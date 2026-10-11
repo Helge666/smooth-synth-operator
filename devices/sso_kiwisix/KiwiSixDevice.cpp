@@ -117,11 +117,10 @@ KiwiSixDevice::KiwiSixDevice() : KiwiTechnicsDevice (0x02)    // F0 00 21 16 60 
     p.push_back (choice ("mg_wave", "Wave", "MG", 0x36, 3, 3, lfoWaves, 65, ccWave));
 
     // Effects ----------------------------------------------------------------------
-    // Flags as in the manual's tone table: chorus 4, ensemble 2, phase 1 (the factory "Strings"
-    // use 2 = ensemble like the original PolySix preset). CC 118 decodes 32-63 phase,
-    // 64-95 ensemble, 96-127 chorus.
+    // Stored 1 chorus, 2 phase, 4 ensemble - verified with the panel switch (the manual's tone
+    // table lists the flags in another order). CC 118 decodes quarters in the same order.
     p.push_back (choice ("fx_type", "Mode", "Effects", 0x39, 0, 3, { "Off", "Chorus", "Phase", "Ensemble" },
-                         118, { 16, 112, 48, 80 }, 0, { 0, 4, 1, 2 }));
+                         118, { 16, 48, 80, 112 }, 0, { 0, 1, 2, 4 }));
     p.push_back (wide ("fx_speed", "Speed/Intensity", "Effects", 0x37, 63, 2048));
 
     // Key assign and arpeggiator ---------------------------------------------------
