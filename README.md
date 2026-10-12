@@ -31,6 +31,15 @@ programmer shares all of the following:
   (others grey out, TAKE OVER by click); the track's notes are played on the synth
 - MIDI loop protection
 
+## Versions
+
+Each app shows its version under the logo, with the synth firmware it was made and tested
+with (e.g. "v1.0.0 · for HAWK-800 v2.68b"). The first two numbers are set by hand in the app's
+`VERSION` file: the first for a complete rework, a new framework or new synth firmware, the
+second for larger changes. The third counts itself: the commits that changed the app's code
+(its folder, its device modules, `framework/sso_core`) since `VERSION` last changed - same
+code, same number.
+
 ## Troubleshooting
 
 Problems such as a detected MIDI loop are written to `%TEMP%\SSO-ownership\ownership.log`.

@@ -12,6 +12,7 @@ public:
     struct Layout
     {
         juce::String productLine;           // under the SSO logo, e.g. "Kiwi-3P Programmer"
+        juce::String version;               // the app's version, e.g. "1.0.3" (SSO_APP_VERSION)
         int consoleWidth = 1520;            // header + panel, without the browser
         int designHeight = 930;
         int panelGap = 14;                  // between header and panel

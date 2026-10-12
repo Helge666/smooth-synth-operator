@@ -1,4 +1,8 @@
+# v<major>.<minor> in VERSION, the third number counts the commits that changed this app's code
+sso_app_version(SSO_Kiwi3P SSO_Kiwi3P_VERSION apps/SSO-Kiwi3P devices/sso_kiwi3p devices/sso_kiwitechnics framework/sso_core)
+
 juce_add_plugin(SSO_Kiwi3P
+    VERSION ${SSO_Kiwi3P_VERSION}
     PRODUCT_NAME "SSO Kiwi-3P"
     COMPANY_NAME "Smooth Synth Operator"
     BUNDLE_ID "org.smoothsynthoperator.kiwi3p"
@@ -18,6 +22,8 @@ target_sources(SSO_Kiwi3P PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEntry.cpp
     Source/Kiwi3PPanel.cpp)
+
+sso_use_app_version(SSO_Kiwi3P SSO_Kiwi3P)
 
 target_compile_definitions(SSO_Kiwi3P PUBLIC
     JUCE_WEB_BROWSER=0

@@ -6,7 +6,7 @@ static int cheeks() noexcept   { return theme::woodCheeks ? ProgrammerEditor::ch
 ProgrammerEditor::Content::Content (ProgrammerProcessor& p, std::unique_ptr<juce::Component> devicePanel, const Layout& l)
     : layout (l),
       browser (p.library, p.controller),
-      header (p.controller, l.productLine),
+      header (p.controller, l.productLine, l.version, p.getName()),
       panel (std::move (devicePanel)),
       tuneOverlay (p.controller),
       inactiveOverlay (p.controller)

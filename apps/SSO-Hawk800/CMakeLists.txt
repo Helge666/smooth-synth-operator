@@ -1,4 +1,8 @@
+# v<major>.<minor> in VERSION, the third number counts the commits that changed this app's code
+sso_app_version(SSO_Hawk800 SSO_Hawk800_VERSION apps/SSO-Hawk800 devices/sso_hawk800 framework/sso_core)
+
 juce_add_plugin(SSO_Hawk800
+    VERSION ${SSO_Hawk800_VERSION}
     PRODUCT_NAME "SSO Hawk-800"
     COMPANY_NAME "Smooth Synth Operator"
     BUNDLE_ID "org.smoothsynthoperator.hawk800"
@@ -18,6 +22,8 @@ target_sources(SSO_Hawk800 PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEntry.cpp
     Source/Hawk800Panel.cpp)
+
+sso_use_app_version(SSO_Hawk800 SSO_Hawk800)
 
 target_compile_definitions(SSO_Hawk800 PUBLIC
     JUCE_WEB_BROWSER=0

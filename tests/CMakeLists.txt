@@ -25,6 +25,10 @@ target_compile_definitions(SSO_Tests PRIVATE
     SSO_LOCAL_KIWISIX_FACTORY="${CMAKE_SOURCE_DIR}/backups/kiwisix_downloads/Kiwi6_factory3.syx"
     SSO_LOCAL_HAWK_FACTORY="${CMAKE_SOURCE_DIR}/backups/hawk800_downloads")
 
+foreach(app SSO_Kiwi3P SSO_KiwiSix SSO_Hawk800)
+    sso_use_app_version(SSO_Tests ${app})
+endforeach()
+
 target_link_libraries(SSO_Tests
     PRIVATE
         sso_core

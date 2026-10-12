@@ -254,8 +254,8 @@ void MidiSettingsPanel::resized()
 }
 
 //==============================================================================
-HeaderBar::HeaderBar (SynthController& c, const juce::String& line)
-    : controller (c), productLine (line), display (c), testPlayer (c)
+HeaderBar::HeaderBar (SynthController& c, const juce::String& line, const juce::String& v, const juce::String& name)
+    : controller (c), productLine (line), version (v), appName (name), display (c), testPlayer (c)
 {
     testButton.setColour (juce::TextButton::buttonOnColourId, theme::lcdText);
     testButton.setTooltip ("Play a test phrase: four Cs, the C major scale and a chord");
@@ -377,17 +377,49 @@ void HeaderBar::timerCallback()
     }
 }
 
+juce::Rectangle<int> HeaderBar::logoArea() const
+{
+    return getLocalBounds().removeFromLeft (200).withSizeKeepingCentre (200, 74);
+}
+
+juce::String HeaderBar::versionLine() const
+{
+    auto firmware = controller.getDevice().getFirmwareInfo();
+    juce::String line;
+
+    if (version.isNotEmpty())
+        line << "v" << version;
+
+    if (firmware.isNotEmpty())
+        line << (line.isEmpty() ? juce::String() : "  " + juce::String::charToString ((juce::juce_wchar) 0xb7) + "  ")   // middle dot
+             << "for " << firmware;
+
+    return line;
+}
+
+juce::String HeaderBar::getTooltip()
+{
+    if (! logoArea().contains (getMouseXYRelative()))
+        return {};
+
+    auto firmware = controller.getDevice().getFirmwareInfo();
+    return (appName.isNotEmpty() ? appName : juce::String ("SSO")) + (version.isNotEmpty() ? " v" + version : juce::String())
+           + (firmware.isNotEmpty() ? ", made and tested with " + firmware : juce::String());
+}
+
 void HeaderBar::paint (juce::Graphics& g)
 {
-    auto r = getLocalBounds();
-    auto logo = r.removeFromLeft (200).withSizeKeepingCentre (200, 60);
+    auto logo = logoArea();
 
     g.setColour (theme::text);
     g.setFont (theme::label (40.0f, true));
-    g.drawText ("SSO", logo.removeFromTop (38), juce::Justification::bottomLeft);
+    g.drawText ("SSO", logo.removeFromTop (40), juce::Justification::bottomLeft);
     g.setColour (theme::textDim);
     g.setFont (theme::label (13.0f).withExtraKerningFactor (0.2f));
-    g.drawText (productLine.toUpperCase(), logo, juce::Justification::topLeft);
+    g.drawText (productLine.toUpperCase(), logo.removeFromTop (18), juce::Justification::centredLeft);
+    g.setColour (theme::textDim.darker (0.11f));     // 10 % darker: less prominent than the title
+    g.setFont (theme::label (11.0f));
+    g.drawText (versionLine(), logo, juce::Justification::centredLeft);
 
     auto leds = getLocalBounds().removeFromRight (56).withSizeKeepingCentre (56, 60);
     auto led = [&g] (juce::Rectangle<int> area, bool on, juce::Colour c, const char* text)

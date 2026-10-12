@@ -17,6 +17,10 @@ public:
     virtual juce::String getDeviceId() const = 0;        // e.g. "kiwi3p" - stored in preset files
     virtual juce::String getDisplayName() const = 0;
     virtual juce::String getLibraryFolderName() const = 0;  // e.g. "Kiwi-3P" (Documents/Smooth Synth Operator/<this>)
+
+    /** The synth firmware the app was built and tested with, e.g. "HAWK-800 v2.68b" - shown
+        with the app's version, so users know what it was made for. */
+    virtual juce::String getFirmwareInfo() const            { return {}; }
     virtual int getPatchSize() const = 0;
     virtual int getMaxNameLength() const = 0;
     virtual int getNumSlots() const = 0;                 // stored sound memories

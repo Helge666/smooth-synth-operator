@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory(external/JUCE)
+include(cmake/SSOVersion.cmake)
 
 # SSO framework and device modules (JUCE module format)
 juce_add_module(framework/sso_core)

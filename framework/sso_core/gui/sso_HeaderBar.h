@@ -53,15 +53,20 @@ private:
 //==============================================================================
 /** Logo, display, main actions and MIDI activity. */
 class HeaderBar : public juce::Component,
+                  public juce::TooltipClient,
                   private juce::ChangeListener,
                   private juce::Timer
 {
 public:
-    HeaderBar (SynthController&, const juce::String& productLine);
+    /** `version` (e.g. "1.0.3") and `appName` (e.g. "SSO Hawk-800") show under the logo,
+        with the firmware the app was made for. */
+    HeaderBar (SynthController&, const juce::String& productLine, const juce::String& version = {},
+               const juce::String& appName = {});
     ~HeaderBar() override;
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    juce::String getTooltip() override;
 
     std::function<void (bool)> onBrowserToggled;
     void setBrowserVisible (bool);
@@ -79,7 +84,9 @@ private:
     void timerCallback() override;
 
     SynthController& controller;
-    juce::String productLine;
+    juce::String productLine, version, appName;
+    juce::Rectangle<int> logoArea() const;
+    juce::String versionLine() const;
     LcdDisplay display;
     void updateTuning();
 

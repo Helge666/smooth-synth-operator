@@ -18,6 +18,7 @@ public:
     juce::String getDeviceId() const override     { return "kiwi3p"; }
     juce::String getDisplayName() const override  { return "Roland JX-3P / Kiwi-3P"; }
     juce::String getLibraryFolderName() const override { return "Kiwi-3P"; }
+    juce::String getFirmwareInfo() const override      { return "Kiwi-3P v4.00"; }    // power-on LED 4 = Prog v400
     int getNumSlots() const override              { return numSlots; }
     juce::String getSlotName (int slot) const override;
 
