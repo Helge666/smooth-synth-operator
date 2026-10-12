@@ -255,6 +255,18 @@ Patch Kiwi3PDevice::createInitPatch() const
     return p;
 }
 
+std::optional<DeviceDefinition::TuneSound> Kiwi3PDevice::getTuneSound() const
+{
+    // DCO 1 alone (mix 100:0), 8' sawtooth, filter fully open, no modulation, gate, chorus off
+    auto p = createPatchWith ({ { "dco1_range", 1 }, { "dco1_wave", 0 }, { "dco1_tune", 63 }, { "dco1_lfo", 0 }, { "dco1_env", 63 },
+                                { "xmod", 0 }, { "dco_mix", 0 }, { "env_velocity", 0 },
+                                { "hpf", 0 }, { "cutoff", 127 }, { "resonance", 0 }, { "vcf_lfo", 0 }, { "vcf_env", 63 },
+                                { "vca_mode", 0 }, { "vca_lfo", 0 }, { "chorus", 0 },
+                                { "voice_mode", 0 }, { "detune", 0 }, { "portamento", 0 } });
+    setPatchName (p, "Tune");
+    return TuneSound { p, 69, TuneSound::Wave::saw };
+}
+
 //==============================================================================
 std::vector<juce::MidiMessage> Kiwi3PDevice::createParamMessages (const MidiSettings& settings, int paramIndex,
                                                                   const std::function<int (int)>& valueOf) const

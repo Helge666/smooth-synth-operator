@@ -51,6 +51,7 @@ void ProgrammerProcessor::changeListenerCallback (juce::ChangeBroadcaster*)
 void ProgrammerProcessor::prepareToPlay (double newSampleRate, int maximumBlockSize)
 {
     forwarder.prepare (newSampleRate, maximumBlockSize);
+    tuneTone.prepare (newSampleRate, controller.getTuneWave());
 
     juce::MessageManager::callAsync ([this, alive = aliveFlag]
     {
@@ -67,12 +68,13 @@ void ProgrammerProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         if (auto position = hostPlayHead->getPosition())
             playing = position->getIsPlaying();
 
-    forwarder.setEnabled (forwardNotes.load());
+    forwarder.setEnabled (forwardNotes.load() && ! controller.isTuning());   // the synth holds the tune note
     forwarder.setUserOffsetMs (noteOffsetMs.load());
     forwarder.process (midi, buffer.getNumSamples(), playing);
 
     midi.clear();       // the notes go straight to the synth
     buffer.clear();
+    tuneTone.process (buffer, controller.isTuneSounding(), controller.getTuneLevelDb());
 }
 
 void ProgrammerProcessor::processBlockBypassed (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)

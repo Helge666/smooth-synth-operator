@@ -249,6 +249,19 @@ Patch Hawk800Device::createInitPatch() const
     return p;
 }
 
+std::optional<DeviceDefinition::TuneSound> Hawk800Device::getTuneSound() const
+{
+    // DCO 1 alone with a single footage: a plain square wave (with one footage the waveform
+    // setting makes no difference). Octave 16' + footage 16' = concert pitch (measured: note 69
+    // plays 440 Hz; octave 8' plays 880 Hz). Filter fully open, no modulation, chorus off.
+    auto p = createPatchWith ({ { "dco1_octave", 0 }, { "dco1_wave", 0 }, { "dco1_harmonics", 0 }, { "dco1_level", 31 },
+                                { "dco_mode", 0 }, { "dco2_level", 0 }, { "noise", 0 }, { "chorus", 0 },
+                                { "cutoff", 99 }, { "resonance", 0 }, { "eg3_int", 0 },
+                                { "eg1_attack", 0 }, { "eg1_sustain", 31 }, { "key_assign", 0 }, { "portamento", 0 } });
+    setPatchName (p, "Tune");
+    return TuneSound { p, 69, TuneSound::Wave::square };
+}
+
 juce::String Hawk800Device::getPatchName (const Patch& p) const
 {
     juce::String name;

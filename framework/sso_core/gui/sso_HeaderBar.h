@@ -71,6 +71,9 @@ public:
     /** Plays/stops the test phrase (TEST button, space key in the standalone app). */
     void toggleTestNotes();
 
+    /** Called when tuning (TUNE) starts or ends. */
+    std::function<void (bool)> onTuningChanged;
+
 private:
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
     void timerCallback() override;
@@ -78,9 +81,12 @@ private:
     SynthController& controller;
     juce::String productLine;
     LcdDisplay display;
-    juce::TextButton browserButton { "BROWSER" }, testButton { "TEST" }, getButton { "GET" }, sendButton { "SEND" },
+    void updateTuning();
+
+    juce::TextButton browserButton { "BROWSER" }, testButton { "TEST" }, tuneButton { "TUNE" }, getButton { "GET" }, sendButton { "SEND" },
                      freezeButton { "FREEZE" }, midiButton { "MIDI" }, globalsButton { "GLOBALS" };
     TestNotePlayer testPlayer;
+    bool tuning = false;
     uint32_t lastSent = 0, lastReceived = 0;
     int txFlash = 0, rxFlash = 0;
 };

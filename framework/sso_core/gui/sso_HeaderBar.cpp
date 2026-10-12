@@ -55,6 +55,10 @@ juce::String LcdDisplay::statusLine() const
     if (controller.getPresence() == SynthController::Presence::absent)
         return "NO ANSWER FROM THE SYNTH - CHECK POWER, CABLES AND MIDI PORTS";
 
+    if (controller.isTuning())
+        return controller.isTuneSounding() ? juce::String ("TUNING: A 440 HZ - TUNE AGAIN RESTORES THE SOUND")
+                                           : juce::String ("TUNING: LOADING THE TUNE SOUND...");
+
     juce::String sync;
 
     switch (controller.getSyncState())
@@ -258,6 +262,16 @@ HeaderBar::HeaderBar (SynthController& c, const juce::String& line)
     testButton.onClick = [this] { toggleTestNotes(); };
     testPlayer.onStateChanged = [this] (bool playing) { testButton.setToggleState (playing, juce::dontSendNotification); };
 
+    tuneButton.setColour (juce::TextButton::buttonOnColourId, theme::orange);
+    tuneButton.setTooltip ("Tune the synth by ear: it plays an A (440 Hz) while the same tone comes from the "
+                           "app's audio output. Press again to get the sound back");
+    tuneButton.onClick = [this]
+    {
+        testPlayer.stop();
+        controller.setTuning (! controller.isTuning());
+        updateTuning();
+    };
+
     browserButton.setClickingTogglesState (true);
     browserButton.onClick = [this]
     {
@@ -292,22 +306,30 @@ HeaderBar::HeaderBar (SynthController& c, const juce::String& line)
     for (auto* b : { &browserButton, &testButton, &getButton, &sendButton, &freezeButton, &midiButton })
         addAndMakeVisible (b);
 
-    // only for synths with global settings the app manages
+    // only for synths with a tune sound / global settings the app manages
+    addChildComponent (tuneButton);
+    tuneButton.setVisible (controller.canTune());
     addChildComponent (globalsButton);
     globalsButton.setVisible (! controller.getDevice().getGlobalParams().empty());
 
     addAndMakeVisible (display);
     controller.addChangeListener (this);
+    updateTuning();
     startTimerHz (20);
 }
 
 HeaderBar::~HeaderBar()
 {
+    // The editor closes: no tuning without its button
     controller.removeChangeListener (this);
+    controller.setTuning (false);
 }
 
 void HeaderBar::toggleTestNotes()
 {
+    if (controller.isTuning())
+        return;
+
     if (testPlayer.isPlaying())
         testPlayer.stop();
     else
@@ -322,7 +344,21 @@ void HeaderBar::setBrowserVisible (bool visible)
 void HeaderBar::changeListenerCallback (juce::ChangeBroadcaster*)
 {
     freezeButton.setToggleState (controller.isFrozen(), juce::dontSendNotification);
+    updateTuning();
     repaint();
+}
+
+void HeaderBar::updateTuning()
+{
+    auto nowTuning = controller.isTuning();
+    tuneButton.setToggleState (nowTuning, juce::dontSendNotification);
+
+    // nothing may replace the tune sound meanwhile
+    for (auto* b : { &testButton, &getButton, &sendButton, &freezeButton })
+        b->setEnabled (! nowTuning);
+
+    if (nowTuning != std::exchange (tuning, nowTuning) && onTuningChanged != nullptr)
+        onTuningChanged (nowTuning);
 }
 
 void HeaderBar::timerCallback()
@@ -377,14 +413,16 @@ void HeaderBar::resized()
     r.removeFromLeft (210);
     r.removeFromRight (62);
 
-    std::vector<juce::TextButton*> visibleButtons { &browserButton, &testButton, &getButton, &sendButton, &freezeButton, &midiButton };
+    std::vector<juce::TextButton*> visibleButtons;
 
-    if (globalsButton.isVisible())
-        visibleButtons.push_back (&globalsButton);
+    for (auto* b : { &browserButton, &testButton, &tuneButton, &getButton, &sendButton, &freezeButton, &midiButton, &globalsButton })
+        if (b->isVisible())
+            visibleButtons.push_back (b);
 
-    auto buttons = r.removeFromRight ((int) visibleButtons.size() * 96);
+    constexpr int pitch = 90;
+    auto buttons = r.removeFromRight ((int) visibleButtons.size() * pitch);
     for (auto* b : visibleButtons)
-        b->setBounds (buttons.removeFromLeft (96).reduced (4, 0).withSizeKeepingCentre (88, 46));
+        b->setBounds (buttons.removeFromLeft (pitch).withSizeKeepingCentre (82, 46));
 
     display.setBounds (r.reduced (10, 4));
 }

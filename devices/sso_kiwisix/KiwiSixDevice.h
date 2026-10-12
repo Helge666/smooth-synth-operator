@@ -27,6 +27,7 @@ public:
     juce::String getBankName (int bank) const override;
 
     Patch createInitPatch() const override;
+    std::optional<TuneSound> getTuneSound() const override;
     Patch asStored (const Patch&) const override;
 
     std::vector<juce::MidiMessage> createParamMessages (const MidiSettings&, int paramIndex,

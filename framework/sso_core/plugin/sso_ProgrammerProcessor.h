@@ -4,7 +4,8 @@ namespace sso
 {
 
 /** The audio processor shared by all programmers: parameters, synth controller, library,
-    generator and note forwarding. It makes no sound itself - the track's notes go to the synth.
+    generator and note forwarding. The track's notes go to the synth; the only sound it makes
+    itself is the reference tone while tuning (TUNE).
 
     A programmer derives from it, passes its device definition, creates its generator and
     returns its editor.
@@ -52,6 +53,7 @@ public:
     PresetLibrary library { device };
     std::unique_ptr<PatchGenerator> generator;      // created by the derived programmer
     NoteForwarder forwarder { controller };         // plays the track's notes on the synth
+    TuneTone tuneTone;                              // the 440 Hz reference while tuning
 
 private:
     void changeListenerCallback (juce::ChangeBroadcaster*) override;

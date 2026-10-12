@@ -149,6 +149,17 @@ Patch KiwiSixDevice::createInitPatch() const
     return asStored (DeviceDefinition::createInitPatch());
 }
 
+std::optional<DeviceDefinition::TuneSound> KiwiSixDevice::getTuneSound() const
+{
+    // 8' sawtooth without sub oscillator, filter fully open, no modulation, gate, effects off
+    auto p = createPatchWith ({ { "vco_octave", 1 }, { "vco_wave", 0 }, { "sub_osc", 0 },
+                                { "cutoff", maxValue12 }, { "resonance", 0 }, { "eg_int", 2048 },
+                                { "vca_mode", 1 }, { "mg_level", 0 }, { "mg_vco", 0 }, { "mg_vcf", 0 }, { "mg_vca", 0 },
+                                { "fx_type", 0 }, { "key_assign", 0 }, { "hold", 0 }, { "arp_range", 0 } });
+    setPatchName (p, "Tune");
+    return TuneSound { asStored (p), 69, TuneSound::Wave::saw };
+}
+
 Patch KiwiSixDevice::asStored (const Patch& p) const
 {
     auto stored = p;

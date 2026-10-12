@@ -32,6 +32,22 @@ Patch DeviceDefinition::createInitPatch() const
     return p;
 }
 
+Patch DeviceDefinition::createPatchWith (std::initializer_list<std::pair<const char*, int>> values) const
+{
+    auto p = createInitPatch();
+
+    for (auto& [id, value] : values)
+    {
+        auto index = indexOf (id);
+        jassert (index >= 0);   // unknown parameter id
+
+        if (index >= 0)
+            setValue (p, index, value);
+    }
+
+    return p;
+}
+
 static int fieldMask (const ParamSpec& s) noexcept { return ((1 << s.bits) - 1) << s.shift; }
 
 int DeviceDefinition::readField (const ParamSpec& s, const std::vector<uint8_t>& data)

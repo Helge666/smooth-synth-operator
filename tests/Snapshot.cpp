@@ -63,6 +63,15 @@ namespace
             return 0;
         }
 
+        // --tuning: TUNE pressed - on a dummy port, nothing reaches the real synth
+        if (args.contains ("--tuning"))
+        {
+            processor.controller.getConnection().setInput ({});
+            processor.controller.getConnection().setOutput ("SSO-TEST-PORT-snapshot");
+            processor.controller.startUsing();
+            processor.controller.setTuning (true);
+        }
+
         std::unique_ptr<juce::AudioProcessorEditor> editor ((second != nullptr ? *second : processor).createEditor());
 
         auto cheeks = sso::theme::woodCheeks ? 2 * sso::ProgrammerEditor::cheekWidth : 0;
@@ -70,7 +79,7 @@ namespace
         editor->setSize (designWidth, Editor::designHeight);
 
         // let timers/async updates settle (LEDs, display)
-        juce::MessageManager::getInstance()->runDispatchLoopUntil (300);
+        juce::MessageManager::getInstance()->runDispatchLoopUntil (args.contains ("--tuning") ? 2500 : 300);
 
         auto image = editor->createComponentSnapshot (editor->getLocalBounds(), true, scale);
         out.deleteFile();
@@ -134,7 +143,7 @@ int runClickMemoryTest()
 }
 
 /** Renders a plugin editor offscreen to a PNG - for reviewing the GUI without a host.
-    Usage: SSO_Tests --snapshot out.png [--device kiwi3p|kiwisix|hawk800] [--no-browser] [--inactive] [--scale 1.0] */
+    Usage: SSO_Tests --snapshot out.png [--device kiwi3p|kiwisix|hawk800] [--no-browser] [--inactive] [--tuning] [--scale 1.0] */
 int runSnapshot (const juce::StringArray& args)
 {
     auto deviceIndex = args.indexOf ("--device");

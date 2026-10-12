@@ -40,6 +40,7 @@ private:
         PresetBrowser browser;
         HeaderBar header;
         std::unique_ptr<juce::Component> panel;
+        TuneOverlay tuneOverlay;            // over browser and panel while tuning
         InactiveOverlay inactiveOverlay;
         bool browserVisible = true;
     };

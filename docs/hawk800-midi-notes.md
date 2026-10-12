@@ -37,6 +37,11 @@ high/low nibble pairs.
 | 12 | write the running patch into the selected patch; `7E 12 00` if the write switch is off | no |
 | 02–05 | peek / poke / dump / erase memory – never used | – |
 
+**Processing time:** an edit-buffer dump (`06 40`) is acknowledged about 0.4 s after it arrived.
+A note sent meanwhile is lost (only a click is heard); SSO waits a whole second after a dump
+before it plays notes (`getSettleTimeMs`). Read-only requests (`0A 02`, `0D`) and CC 120 do not
+disturb held notes (measured 2026-10-12).
+
 ## Patch data (128 bytes)
 
 Byte *i* = parameter *i*: bytes 0–63 are P1 11, 12 … 18, 21 … 88 (original Poly-800 parameters),
@@ -54,7 +59,8 @@ Measured meanings that differ from or add to the manual (audio recorded from the
   weighted; harmonics at -6, -9.5, -12, -14 dB). With a single footage both sound the same.
 - **P1 13/23 harmonics** (footages within the octave): stored 0-15 = 16', 8', 4', 2', 16'+8',
   16'+4', 16'+2', 8'+4', 8'+2', 4'+2', 16'+8'+4', 16'+8'+2', 16'+4'+2', 8'+4'+2', all, none - as
-  in the manual. Octave 16' with footage 16' plays MIDI note 57 at 220 Hz.
+  in the manual. Octave 16' with footage 16' is concert pitch: note 57 plays 220 Hz, note 69
+  440 Hz (octave 8' plays 880 Hz). SSO's TUNE sound uses this with a single footage (square).
 - **P1 43 EG3 polarity**: stored **1 = positive** (EG3 opens the filter), 0 = negative - the
   manual's "1 = positive" is the reverse. The Korg brass sounds use cutoff 0 with polarity 1.
 - **P1 31 interval** goes up to 12 (octave) in the factory sounds, the manual says 0-11.

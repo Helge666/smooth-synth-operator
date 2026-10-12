@@ -56,6 +56,7 @@ SynthController::SynthController (const DeviceDefinition& d, juce::AudioProcesso
     }
 
     basePatch = device.createInitPatch();
+    tuneSound = device.getTuneSound();
 
     connection.onMessageReceived = [this] (const juce::MidiMessage& m)
     {
@@ -88,6 +89,9 @@ SynthController::SynthController (const DeviceDefinition& d, juce::AudioProcesso
             if (auto& spec = device.getGlobalParams()[i]; stored->hasProperty (spec.id))
                 globalValues[i] = juce::jlimit (spec.minValue, spec.maxValue, (int) stored->getProperty (spec.id));
 
+    tuneLevelDb = juce::jlimit (minTuneLevelDb, maxTuneLevelDb,
+                                (float) props.getDoubleValue (settingsKey ("tuneLevelDb"), defaultTuneLevelDb));
+
     connection.setOutput (props.getValue (settingsKey ("midiOut")));
     connection.setInput (props.getValue (settingsKey ("midiIn")));
 
@@ -105,6 +109,22 @@ SynthController::SynthController (const DeviceDefinition& d, juce::AudioProcesso
 SynthController::~SynthController()
 {
     stopTimer();
+
+    // Closing the app or project while tuning: the synth gets its sound back. Sent directly,
+    // the paced queue ends with this object.
+    if (std::exchange (tuneLoaded, false) && active.load())
+    {
+        sender.setMuted (true);
+        auto channel = getMidiSettings().channel;
+        auto send = [this] (const juce::MidiMessage& m) { connection.send (m); };
+
+        if (tuneSounding.exchange (false))
+            send (juce::MidiMessage::noteOff (channel, tuneSound->note));
+
+        send (juce::MidiMessage::allSoundOff (channel));
+        sendSoundToEditBuffer (tuneRestore, send);
+    }
+
     registry->remove (*this);
 
     connection.onMessageReceived = nullptr;
@@ -123,6 +143,19 @@ juce::String SynthController::getOwnershipKey() const
 void SynthController::ownershipChanged (bool isOwner, bool takenOver)
 {
     auto wasActive = active.load();
+
+    // Another instance takes over while tuning: release the note, it sends its own sound
+    if (! isOwner && tuning.load())
+    {
+        if (tuneSounding.exchange (false))
+            connection.send (juce::MidiMessage::noteOff (getMidiSettings().channel, tuneSound->note));
+
+        tuning = false;
+        tuneLoaded = false;
+        capturingForTune = false;
+        ++tuneGeneration;
+    }
+
     active = isOwner;
     sender.setMuted (! active);
 
@@ -312,7 +345,7 @@ void SynthController::parameterChanged (const juce::String& parameterID, float n
         value += spec.minValue;
 
     auto fromSynth = applyingFromSynth.load() > 0;
-    sender.setValue (index, value, ! fromSynth);
+    sender.setValue (index, value, ! fromSynth && ! tuning.load());     // edits while tuning: sent afterwards
 
     if (! fromSynth)
     {
@@ -388,7 +421,7 @@ void SynthController::loadPatch (const Patch& patch, bool sendToSynthNow)
 
 void SynthController::requestFromSynth()
 {
-    if (! active)
+    if (! active || tuning.load())
         return;
 
     sender.enqueue (device.createEditBufferRequest (getMidiSettings()));
@@ -397,6 +430,9 @@ void SynthController::requestFromSynth()
 
 void SynthController::sendToSynth()
 {
+    if (tuning.load())
+        endTuning (false);      // a new sound replaces the tune sound
+
     sender.clearDirty();
     sender.enqueue (device.createEditBufferDump (getMidiSettings(), getCurrentPatch()));
 
@@ -462,6 +498,121 @@ void SynthController::endSlotAccess()
         sender.enqueue (device.createBankSelect (getMidiSettings(), panelBank));
         synthBank = panelBank;
     }
+}
+
+//==============================================================================
+static constexpr int tuneCaptureTimeoutMs = 800;
+
+void SynthController::setTuning (bool shouldTune)
+{
+    if (! shouldTune)
+    {
+        if (tuning.load())
+            endTuning (true);
+
+        return;
+    }
+
+    if (tuning.load() || ! tuneSound.has_value() || ! active.load())
+        return;
+
+    tuning = true;
+    tuneAppPatch = getCurrentPatch();
+    tuneRestore = tuneAppPatch;         // unless the synth reports what it plays
+    auto generation = ++tuneGeneration;
+
+    // Ask the synth what it plays; the tune sound follows the answer (or a timeout)
+    capturingForTune = true;
+    sender.enqueue (device.createEditBufferRequest (getMidiSettings()));
+
+    juce::Timer::callAfterDelay (tuneCaptureTimeoutMs, [weak = juce::WeakReference<SynthController> (this), generation]
+    {
+        if (weak != nullptr)
+            weak->startTuneSound (generation);
+    });
+
+    sendChangeMessage();
+}
+
+void SynthController::setTuneLevelDb (float db)
+{
+    tuneLevelDb = juce::jlimit (minTuneLevelDb, maxTuneLevelDb, db);
+    settings->get().setValue (settingsKey ("tuneLevelDb"), (double) tuneLevelDb.load());
+}
+
+void SynthController::startTuneSound (int generation)
+{
+    if (generation != tuneGeneration || ! tuning.load() || tuneLoaded || ! active.load())
+        return;
+
+    capturingForTune = false;
+    tuneLoaded = true;
+    silence();
+
+    // The note follows when the synth has taken the sound: the dump's time on the wire plus a pause
+    double wireMs = 0;
+    sendSoundToEditBuffer (tuneSound->patch, [this, &wireMs] (const juce::MidiMessage& m)
+    {
+        wireMs += m.getRawDataSize() * 10.0 * 1000.0 / 31250.0;
+        sender.enqueue (m);
+    });
+
+    juce::Timer::callAfterDelay (juce::roundToInt (wireMs + device.getSettleTimeMs()),
+                                 [weak = juce::WeakReference<SynthController> (this), generation]
+    {
+        if (weak != nullptr)
+            weak->playTuneNote (generation);
+    });
+}
+
+void SynthController::playTuneNote (int generation)
+{
+    if (generation != tuneGeneration || ! tuning.load() || ! tuneLoaded || ! active.load())
+        return;
+
+    sender.enqueue (juce::MidiMessage::noteOn (getMidiSettings().channel, tuneSound->note, (juce::uint8) 100));
+    tuneSounding = true;
+    sendChangeMessage();
+}
+
+void SynthController::endTuning (bool restore)
+{
+    tuning = false;
+    capturingForTune = false;
+    ++tuneGeneration;
+
+    if (std::exchange (tuneLoaded, false))
+    {
+        if (tuneSounding.exchange (false))
+            sender.enqueue (juce::MidiMessage::noteOff (getMidiSettings().channel, tuneSound->note));
+
+        silence();
+
+        if (restore)
+        {
+            sendSoundToEditBuffer (tuneRestore, [this] (const juce::MidiMessage& m) { sender.enqueue (m); });
+
+            // edits made meanwhile (e.g. host automation) follow the restored sound
+            for (int i = 0; i < (int) parameters.size(); ++i)
+                if (sender.getValue (i) != device.getValue (tuneAppPatch, i))
+                    sender.markDirty (i);
+        }
+    }
+
+    sendChangeMessage();
+}
+
+void SynthController::sendSoundToEditBuffer (const Patch& patch, const std::function<void (const juce::MidiMessage&)>& send)
+{
+    auto midiSettings = getMidiSettings();
+    send (device.createEditBufferDump (midiSettings, patch));
+
+    // values the hardware does not take from a dump
+    auto valueOf = [this, &patch] (int i) { return device.getValue (patch, i); };
+
+    for (auto index : device.getParamsToRefreshAfterDump())
+        for (auto& m : device.createParamMessages (midiSettings, index, valueOf))
+            send (m);
 }
 
 void SynthController::setPresetRef (PresetRef ref)
@@ -566,6 +717,18 @@ void SynthController::handleIncomingMessage (const juce::MidiMessage& m)
 
         if (onSlotReceived != nullptr)
             onSlotReceived (*incoming);
+
+        return;
+    }
+
+    if (tuning.load())
+    {
+        // The answer to the request before tuning is the sound to restore; ignore anything later
+        if (std::exchange (capturingForTune, false))
+        {
+            tuneRestore = incoming->patch;
+            startTuneSound (tuneGeneration);
+        }
 
         return;
     }

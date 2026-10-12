@@ -78,6 +78,28 @@ public:
     bool isFrozen() const noexcept;
 
     //==============================================================================
+    /** Tuning by ear (TUNE): the synth holds the device's tune sound (DeviceDefinition::getTuneSound)
+        while the app plays the same waveform at 440 Hz. The sound the synth played before is read
+        from its edit buffer first and sent back when tuning ends. Meanwhile edits are kept in the
+        app but not sent, and edit-buffer dumps from the synth are ignored. Message thread. */
+    bool canTune() const noexcept                   { return tuneSound.has_value(); }
+    void setTuning (bool);
+    bool isTuning() const noexcept                  { return tuning.load(); }
+
+    /** True from the moment the tune note is sent until it is released - the reference tone
+        sounds meanwhile. Any thread. */
+    bool isTuneSounding() const noexcept            { return tuneSounding.load(); }
+    /** Level of the app's reference tone in dBFS RMS, remembered per synth (any thread to read). */
+    float getTuneLevelDb() const noexcept           { return tuneLevelDb.load(); }
+    void setTuneLevelDb (float);
+    static constexpr float minTuneLevelDb = -48.0f, maxTuneLevelDb = 0.0f, defaultTuneLevelDb = -12.0f;
+
+    DeviceDefinition::TuneSound::Wave getTuneWave() const noexcept
+    {
+        return tuneSound.has_value() ? tuneSound->wave : DeviceDefinition::TuneSound::Wave::saw;
+    }
+
+    //==============================================================================
     DeviceDefinition::MidiSettings getMidiSettings() const noexcept;
     void setMidiChannel (int channel1to16);
     void setDeviceId (int id0to15);
@@ -180,6 +202,19 @@ private:
     int panelBank = -1;                 // bank the user had selected (from the global dump)
     bool accessingSlots = false;
     void selectBankFor (int slot);
+
+    std::optional<DeviceDefinition::TuneSound> tuneSound;
+    std::atomic<bool> tuning { false }, tuneSounding { false };
+    std::atomic<float> tuneLevelDb { defaultTuneLevelDb };
+    bool capturingForTune = false;      // waiting for the synth's edit buffer before tuning
+    bool tuneLoaded = false;            // the tune sound was sent: the synth's sound must be restored
+    int tuneGeneration = 0;             // tells a late capture timeout from the current one
+    Patch tuneRestore;                  // the synth's sound before tuning
+    Patch tuneAppPatch;                 // the app's sound when tuning started
+    void startTuneSound (int generation);
+    void playTuneNote (int generation);
+    void endTuning (bool restore);
+    void sendSoundToEditBuffer (const Patch&, const std::function<void (const juce::MidiMessage&)>& send);
     bool registered = false;
     juce::String registeredKey;
     juce::String description { "SSO" };

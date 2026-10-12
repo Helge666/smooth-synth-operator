@@ -22,6 +22,7 @@ public:
     juce::String getSlotName (int slot) const override;
 
     Patch createInitPatch() const override;
+    std::optional<TuneSound> getTuneSound() const override;
 
     std::vector<juce::MidiMessage> createParamMessages (const MidiSettings&, int paramIndex,
                                                         const std::function<int (int)>& valueOf) const override;

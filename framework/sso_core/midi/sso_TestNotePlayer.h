@@ -41,7 +41,6 @@ private:
     std::atomic<bool> playing { false };
     std::set<int> sounding;
     juce::CriticalSection lock;
-    static constexpr double startDelayMs = 50;
     std::shared_ptr<bool> alive = std::make_shared<bool> (true);   // guards async callbacks
 };
 

@@ -8,11 +8,13 @@ ProgrammerEditor::Content::Content (ProgrammerProcessor& p, std::unique_ptr<juce
       browser (p.library, p.controller),
       header (p.controller, l.productLine),
       panel (std::move (devicePanel)),
+      tuneOverlay (p.controller),
       inactiveOverlay (p.controller)
 {
     addAndMakeVisible (browser);
     addAndMakeVisible (header);
     addAndMakeVisible (*panel);
+    addChildComponent (tuneOverlay);        // shows itself while tuning
     addChildComponent (inactiveOverlay);    // shows itself while the instance is inactive
 
     header.getDisplay().onRenameRequested = [this] { browser.renameCurrent(); };
@@ -67,6 +69,8 @@ void ProgrammerEditor::Content::resized()
 
     auto r = consoleArea().reduced (20, 18);
     header.setBounds (r.removeFromTop (84));
+    tuneOverlay.setBounds (getLocalBounds());
+    tuneOverlay.setUncovered (header.getBounds());
     r.removeFromTop (layout.panelGap);
     panel->setBounds (r);
 }

@@ -48,7 +48,8 @@ void TestNotePlayer::play (std::vector<Event> phrase)
         events = std::move (phrase);
         std::stable_sort (events.begin(), events.end(), [] (auto& a, auto& b) { return a.timeMs < b.timeMs; });
         next = 0;
-        startMs = juce::Time::getMillisecondCounterHiRes() + startDelayMs;
+        // after All Sound Off the synth may need a moment (the HAWK-800 a whole second)
+        startMs = juce::Time::getMillisecondCounterHiRes() + juce::jmax (50, controller.getDevice().getSettleTimeMs());
         playing = true;
     }
 

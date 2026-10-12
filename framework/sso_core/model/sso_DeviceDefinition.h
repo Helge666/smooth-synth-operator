@@ -100,6 +100,25 @@ public:
     virtual int getSelectedBank (const std::vector<uint8_t>& /*globalDump*/) const       { return -1; }
 
     //==============================================================================
+    /** Tuning by ear (TUNE button): a sound with one plain oscillator and the filter fully open,
+        played as `note` (A = 440 Hz when the synth is in tune), and the waveform the app plays
+        as its 440 Hz reference - the same one, so the two can be compared directly. */
+    struct TuneSound
+    {
+        enum class Wave { saw, square };
+
+        Patch patch;
+        int note = 69;
+        Wave wave = Wave::saw;
+    };
+
+    virtual std::optional<TuneSound> getTuneSound() const   { return std::nullopt; }
+
+    /** How long the synth needs after receiving a sound (or All Sound Off) before it plays notes
+        reliably: notes sent earlier can get lost while its processor is busy. */
+    virtual int getSettleTimeMs() const     { return 100; }
+
+    //==============================================================================
     /** Synth-wide settings that are not part of a sound (tuning, arpeggiator clock, ...).
         Only musical ones belong here - never MIDI channels or MIDI enables, which the app
         needs to talk to the synth. Their offsets refer to the synth's global dump. */
@@ -126,6 +145,9 @@ public:
     static int buildFieldByte (const std::vector<ParamSpec>&, int offset, const std::function<int (int)>& valueOf);
 
 protected:
+    /** The init patch with some parameters (by id) set - for sounds a device defines in code. */
+    Patch createPatchWith (std::initializer_list<std::pair<const char*, int>> values) const;
+
     std::vector<ParamSpec> params;
     std::vector<ParamSpec> globalParams;
 };

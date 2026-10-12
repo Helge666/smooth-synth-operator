@@ -25,6 +25,8 @@ programmer shares all of the following:
 - Synth memory view: read all slots, write by drag and drop with read-back
 - Patch generator with 8 categories, KEEP masks, variations and history
 - TEST phrase; All Sound Off before switching sounds
+- TUNE: the synth plays an A with a plain waveform while the app plays the same tone at
+  440 Hz (adjustable level) for tuning by ear; the synth's sound comes back afterwards
 - Plugin: sound is saved with the project and sent when it opens; one instance per synth
   (others grey out, TAKE OVER by click); the track's notes are played on the synth
 - MIDI loop protection
@@ -55,6 +57,9 @@ git submodule update --init
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 ```
+
+To install the VST3 plugins, run `install-vst3.ps1` from an administrator PowerShell
+(`powershell -ExecutionPolicy Bypass -File .\install-vst3.ps1`).
 
 ## License
 

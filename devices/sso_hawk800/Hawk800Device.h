@@ -37,6 +37,11 @@ public:
     juce::String getGroupName (int group) const override { return "-" + juce::String (group + 1) + "x"; }
 
     Patch createInitPatch() const override;
+    std::optional<TuneSound> getTuneSound() const override;
+
+    // Measured: a sound dump is acknowledged ~0.4 s after it arrived; notes sent meanwhile are lost.
+    // A whole second, to be safe.
+    int getSettleTimeMs() const override                { return 1000; }
     juce::String getPatchName (const Patch&) const override;
     void setPatchName (Patch&, const juce::String&) const override;
     bool storesPatchNames() const override              { return false; }
