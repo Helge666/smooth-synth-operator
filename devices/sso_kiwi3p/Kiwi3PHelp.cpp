@@ -10,10 +10,13 @@ juce::String Kiwi3PDevice::getSynthSummary() const
            "FLOW DCO 1 + DCO 2 (mix) -> high pass -> VCF (resonant 24 dB low pass) -> VCA -> chorus -> out\n"
            "MOD two ADSR envelopes ENV 1/ENV 2 and two LFOs; each destination picks its source (..._src). "
            "Mod wheel (mw_*), aftertouch (at_*) and the LFO button can also be routed to many destinations\n"
-           "DCO 2 can sync to DCO 1 or cross-modulate it (X-Mod Metal) for harder, metallic tones\n"
+           "SYNC xmod Sync makes DCO 2 follow DCO 1. Audible only with a big DCO 2 pitch sweep: DCO 1 16' (clock "
+           "only), DCO 2 8' alone in the mix (dco_mix 127), dco2_env near 127 from an envelope (attack 0 + decay = "
+           "falling \"yeow\" per note, slow attack = rising sweep). Small env amounts only add a faint buzz\n"
+           "METAL xmod Metal cross-modulates DCO 2 by DCO 1 for harder, metallic tones\n"
            "VALUES mostly 0..127; centre-off controls (tune, env depths, mod depths) are 0..127 with 63 = no effect\n"
            "TYPICAL detuned DCOs (dco2_fine away from 63) + chorus = classic wide pad; vcf_env above 63 with "
-           "short ENV decay = plucks; Sync + DCO env on DCO 2 = sync sweeps";
+           "short ENV decay = plucks";
 }
 
 void Kiwi3PDevice::addHelp()
@@ -32,9 +35,9 @@ void Kiwi3PDevice::addHelp()
         { "dco2_fine",      "DCO 2 fine tune, +-50 cents, 63 = none; slight offsets thicken the sound" },
         { "dco2_lfo",       "LFO pitch modulation of DCO 2, 0 = off" },
         { "dco2_lfo_src",   "LFO for DCO 2's pitch modulation" },
-        { "dco2_env",       "envelope pitch modulation of DCO 2, 63 = none (with Sync: the classic sweep)" },
+        { "dco2_env",       "envelope pitch modulation of DCO 2, 63 = none; with Sync use 110-127 for the sweep" },
         { "dco2_env_src",   "envelope for DCO 2's pitch modulation" },
-        { "xmod",           "DCO 2 synced to DCO 1 (Sync) or cross-modulated (Metal), or neither" },
+        { "xmod",           "DCO 2 synced to DCO 1 (Sync, needs a big DCO 2 pitch sweep - see SYNC) or cross-modulated (Metal)" },
         { "dco_mix",        "balance DCO 1 : DCO 2, 0 = only DCO 1, 64 = equal, 127 = only DCO 2" },
         { "env_velocity",   "key velocity scales the envelope pitch modulation of these DCOs" },
         { "hpf",            "high pass cutoff, 0 = full bass .. 127 = thin" },
