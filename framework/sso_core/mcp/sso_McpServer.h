@@ -54,6 +54,17 @@ public:
     Reply handle (const juce::var& message);
     Reply handleJson (const juce::String& json);
 
+    /** Who used the server last and when (Time::getMillisecondCounterHiRes), for the status
+        display. Any thread. */
+    struct Activity
+    {
+        juce::String clientName;        // from the client's self-description, e.g. "claude-code"
+        double lastRequestMs = 0;       // 0 = never
+        double lastToolCallMs = 0;
+    };
+
+    Activity getActivity() const;
+
     /** Stops waiting for tool calls (tools still queued are answered with an error) -
         call before the objects the tools use go away. */
     void shutdown();
@@ -82,6 +93,10 @@ private:
 
     const juce::String name, title, version, instructions;
     std::vector<Tool> tools;
+    juce::CriticalSection activityLock;
+    Activity activity;
+    void noteActivity (const juce::var& params, bool toolCall);
+
     std::shared_ptr<std::atomic<bool>> stopped = std::make_shared<std::atomic<bool>> (false);   // shared with queued calls
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (McpServer)

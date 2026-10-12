@@ -54,6 +54,11 @@ public:
     std::unique_ptr<PatchGenerator> generator;      // created by the derived programmer
     NoteForwarder forwarder { controller };         // plays the track's notes on the synth
     TuneTone tuneTone;                              // the 440 Hz reference while tuning
+    juce::String appVersion;                        // set by the derived programmer (SSO_APP_VERSION)
+
+    /** AI control (MCP), off unless the user switches it on. */
+    AiControl aiControl { controller, library, { pluginName, [this] { return appVersion; },
+                                                 [this] { return generator.get(); } } };
 
 private:
     void changeListenerCallback (juce::ChangeBroadcaster*) override;

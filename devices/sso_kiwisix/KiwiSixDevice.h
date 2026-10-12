@@ -21,6 +21,7 @@ public:
     juce::String getDisplayName() const override  { return "Korg PolySix / KiwiSix"; }
     juce::String getLibraryFolderName() const override { return "KiwiSix"; }
     juce::String getFirmwareInfo() const override      { return "KiwiSix v5.00 Build 3"; }
+    int getMcpPort() const override                     { return 47832; }
     int getNumSlots() const override              { return numSlots; }
     juce::String getSlotName (int slot) const override;
 

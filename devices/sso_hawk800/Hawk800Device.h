@@ -28,6 +28,7 @@ public:
     juce::String getDisplayName() const override        { return "Korg Poly-800 / HAWK-800"; }
     juce::String getLibraryFolderName() const override  { return "Hawk-800"; }
     juce::String getFirmwareInfo() const override       { return "HAWK-800 v2.68b"; }
+    int getMcpPort() const override                     { return 47833; }
     int getPatchSize() const override                   { return synthPatchSize + nameLength; }
     int getMaxNameLength() const override               { return nameLength; }
     int getNumSlots() const override                    { return numBanks * slotsPerBank; }

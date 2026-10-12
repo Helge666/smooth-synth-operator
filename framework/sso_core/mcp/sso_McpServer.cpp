@@ -131,8 +131,35 @@ McpServer::Reply McpServer::handle (const juce::var& message)
     return handleRequest (id, method, message["params"]);
 }
 
+McpServer::Activity McpServer::getActivity() const
+{
+    const juce::ScopedLock sl (activityLock);
+    return activity;
+}
+
+void McpServer::noteActivity (const juce::var& params, bool toolCall)
+{
+    // clientInfo: in initialize (legacy) or in every request's _meta (modern)
+    auto info = params["clientInfo"];
+
+    if (! info.isObject())
+        info = params["_meta"][juce::Identifier (juce::String (metaPrefix) + "clientInfo")];
+
+    const juce::ScopedLock sl (activityLock);
+    auto now = juce::Time::getMillisecondCounterHiRes();
+    activity.lastRequestMs = now;
+
+    if (toolCall)
+        activity.lastToolCallMs = now;
+
+    if (info.isObject())
+        activity.clientName = info["title"].toString().isNotEmpty() ? info["title"].toString() : info["name"].toString();
+}
+
 McpServer::Reply McpServer::handleRequest (const juce::var& id, const juce::String& method, const juce::var& params)
 {
+    noteActivity (params, method == "tools/call");
+
     auto meta = params["_meta"];
     auto requested = meta[juce::Identifier (juce::String (metaPrefix) + "protocolVersion")].toString();
     auto modern = requested.isNotEmpty();

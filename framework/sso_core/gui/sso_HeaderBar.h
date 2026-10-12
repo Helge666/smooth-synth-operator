@@ -31,18 +31,24 @@ private:
 };
 
 //==============================================================================
-/** MIDI port and channel selection, shown in a call-out from the header. */
-class MidiSettingsPanel : public juce::Component
+/** MIDI port and channel selection and AI control, shown in a call-out from the header. */
+class MidiSettingsPanel : public juce::Component,
+                          private juce::Timer
 {
 public:
-    explicit MidiSettingsPanel (SynthController&);
+    MidiSettingsPanel (SynthController&, AiControl* = nullptr);
     void resized() override;
     void paint (juce::Graphics&) override;
 
 private:
     void fill();
+    void timerCallback() override;
 
     SynthController& controller;
+    AiControl* ai;
+    juce::ToggleButton aiToggle { "Let AI assistants on this computer control the synth" };
+    juce::TextButton copyButton { "COPY ADDRESS" };
+    juce::String aiStatus;
     juce::ComboBox outputBox, inputBox, channelBox;
     juce::TextButton resumeButton { "RESUME SENDING" };
     juce::ToggleButton forwardToggle { "Play the track's notes on the synth" };
@@ -61,7 +67,7 @@ public:
     /** `version` (e.g. "1.0.3") and `appName` (e.g. "SSO Hawk-800") show under the logo,
         with the firmware the app was made for. */
     HeaderBar (SynthController&, const juce::String& productLine, const juce::String& version = {},
-               const juce::String& appName = {});
+               const juce::String& appName = {}, AiControl* = nullptr);
     ~HeaderBar() override;
 
     void paint (juce::Graphics&) override;
@@ -84,7 +90,10 @@ private:
     void timerCallback() override;
 
     SynthController& controller;
+    AiControl* ai;
     juce::String productLine, version, appName;
+    double lastAiCallMs = 0;
+    int aiFlash = 0;
     juce::Rectangle<int> logoArea() const;
     juce::String versionLine() const;
     LcdDisplay display;

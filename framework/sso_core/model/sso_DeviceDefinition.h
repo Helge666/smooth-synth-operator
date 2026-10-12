@@ -25,6 +25,10 @@ public:
     /** The synth in a few formal lines for AI control (voices, signal flow, quirks) - see
         SynthTools' synth_info. Each line "KEY text", e.g. "FLOW DCO -> VCF -> VCA". */
     virtual juce::String getSynthSummary() const            { return {}; }
+
+    /** Local port of the app's AI control (MCP) endpoint - one per synth, so the apps can run
+        side by side. */
+    virtual int getMcpPort() const                          { return 47830; }
     virtual int getPatchSize() const = 0;
     virtual int getMaxNameLength() const = 0;
     virtual int getNumSlots() const = 0;                 // stored sound memories

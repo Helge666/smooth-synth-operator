@@ -17,7 +17,7 @@ namespace
         auto& props = settings->get();
         std::map<juce::String, std::optional<juce::String>> saved;
 
-        for (auto key : { scaleKey, browserKey, deviceId + ".memoryOpen", deviceId + ".modPage" })
+        for (auto key : { scaleKey, browserKey, deviceId + ".memoryOpen", deviceId + ".modPage", deviceId + ".aiControl" })
             saved[key] = props.containsKey (key) ? std::optional<juce::String> (props.getValue (key)) : std::nullopt;
 
         const juce::ScopeGuard restoreSettings { [&]
@@ -42,6 +42,33 @@ namespace
         {
             second = std::make_unique<Processor>();
             processor.controller.setInstanceDescription ("Cubase - track \"Pad\"");
+        }
+
+        if (args.contains ("--midi"))         // just the MIDI call-out; --ai-on: with AI control switched on
+        {
+            if (args.contains ("--ai-on"))
+            {
+                processor.aiControl.setEnabled (true);
+                processor.controller.startUsing();
+            }
+
+            juce::MessageManager::getInstance()->runDispatchLoopUntil (500);
+            sso::LookAndFeel lf;
+            sso::MidiSettingsPanel panel (processor.controller, &processor.aiControl);
+            panel.setLookAndFeel (&lf);
+            auto image = juce::Image (juce::Image::ARGB, panel.getWidth(), panel.getHeight(), true);
+            {
+                juce::Graphics g (image);
+                g.fillAll (sso::theme::panel);
+                panel.paintEntireComponent (g, true);
+            }
+            out.deleteFile();
+            juce::FileOutputStream stream (out);
+            juce::PNGImageFormat().writeImageToStream (image, stream);
+            panel.setLookAndFeel (nullptr);
+            processor.aiControl.setEnabled (false);
+            std::cout << "wrote " << out.getFullPathName() << std::endl;
+            return 0;
         }
 
         if (args.contains ("--globals"))      // just the globals call-out

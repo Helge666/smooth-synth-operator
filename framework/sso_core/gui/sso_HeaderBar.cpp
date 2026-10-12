@@ -122,7 +122,7 @@ void LcdDisplay::mouseDoubleClick (const juce::MouseEvent&)
 }
 
 //==============================================================================
-MidiSettingsPanel::MidiSettingsPanel (SynthController& c) : controller (c)
+MidiSettingsPanel::MidiSettingsPanel (SynthController& c, AiControl* a) : controller (c), ai (a)
 {
     for (int ch = 1; ch <= 16; ++ch)
         channelBox.addItem ("Channel " + juce::String (ch), ch);
@@ -171,8 +171,38 @@ MidiSettingsPanel::MidiSettingsPanel (SynthController& c) : controller (c)
     offsetSlider.onValueChange = [this] { controller.setNoteOffsetMs (offsetSlider.getValue()); };
     addAndMakeVisible (offsetSlider);
 
+    if (ai != nullptr)
+    {
+        aiToggle.setToggleState (ai->isEnabled(), juce::dontSendNotification);
+        aiToggle.setColour (juce::ToggleButton::textColourId, theme::text);
+        aiToggle.setColour (juce::ToggleButton::tickColourId, theme::accent);
+        aiToggle.setTooltip ("AI assistants such as Claude can then read and change the sound and play notes (MCP). "
+                             "Only programs on this computer can connect; the synth's memory stays untouched.");
+        aiToggle.onClick = [this] { ai->setEnabled (aiToggle.getToggleState()); timerCallback(); };
+        addAndMakeVisible (aiToggle);
+
+        copyButton.setTooltip ("Copies the address to give your AI program");
+        copyButton.onClick = [this] { juce::SystemClipboard::copyTextToClipboard (ai->getUrl()); };
+        addAndMakeVisible (copyButton);
+
+        timerCallback();
+        startTimerHz (2);
+    }
+
     fill();
-    setSize (420, 430);
+    setSize (420, ai != nullptr ? 510 : 430);
+}
+
+void MidiSettingsPanel::timerCallback()
+{
+    auto text = ai->describeStatus();
+    copyButton.setEnabled (ai->getStatus() == AiControl::Status::running);
+
+    if (text != aiStatus)
+    {
+        aiStatus = text;
+        repaint();
+    }
 }
 
 void MidiSettingsPanel::fill()
@@ -222,6 +252,21 @@ void MidiSettingsPanel::paint (juce::Graphics& g)
     g.setColour (theme::textDim);
     g.drawText ("NOTE TIMING OFFSET", r.removeFromTop (18), juce::Justification::bottomLeft);
     r.removeFromTop (34);   // offset slider
+
+    if (ai != nullptr)
+    {
+        r.removeFromTop (8);
+        g.setColour (theme::textDim);
+        g.setFont (theme::label (13.0f));
+        g.drawText ("AI CONTROL (MCP)", r.removeFromTop (18), juce::Justification::bottomLeft);
+        r.removeFromTop (30);   // toggle
+        auto statusArea = r.removeFromTop (40);
+        auto running = ai->getStatus() == AiControl::Status::running;
+        g.setColour (ai->getStatus() == AiControl::Status::portBusy ? theme::red : running ? theme::text : theme::textDim);
+        g.setFont (theme::label (13.0f));
+        g.drawFittedText (aiStatus, statusArea.withTrimmedRight (running ? 130 : 0), juce::Justification::centredLeft, 3);
+    }
+
     r.removeFromTop (8);
     auto loop = controller.getConnection().isLoopDetected();
     g.setColour (loop ? theme::red : theme::textDim);
@@ -249,13 +294,20 @@ void MidiSettingsPanel::resized()
     r.removeFromTop (22);
     offsetSlider.setBounds (r.removeFromTop (30));
 
+    if (ai != nullptr)
+    {
+        r.removeFromTop (4 + 8 + 18);
+        aiToggle.setBounds (r.removeFromTop (30));
+        copyButton.setBounds (r.removeFromTop (40).removeFromRight (120).withSizeKeepingCentre (120, 28));
+    }
+
     resumeButton.setVisible (controller.getConnection().isLoopDetected());
     resumeButton.setBounds (r.removeFromBottom (32).removeFromLeft (160));
 }
 
 //==============================================================================
-HeaderBar::HeaderBar (SynthController& c, const juce::String& line, const juce::String& v, const juce::String& name)
-    : controller (c), productLine (line), version (v), appName (name), display (c), testPlayer (c)
+HeaderBar::HeaderBar (SynthController& c, const juce::String& line, const juce::String& v, const juce::String& name, AiControl* a)
+    : controller (c), ai (a), productLine (line), version (v), appName (name), display (c), testPlayer (c)
 {
     testButton.setColour (juce::TextButton::buttonOnColourId, theme::lcdText);
     testButton.setTooltip ("Play a test phrase: four Cs, the C major scale and a chord");
@@ -292,7 +344,7 @@ HeaderBar::HeaderBar (SynthController& c, const juce::String& line, const juce::
     midiButton.setTooltip ("MIDI ports and channel");
     midiButton.onClick = [this]
     {
-        juce::CallOutBox::launchAsynchronously (std::make_unique<MidiSettingsPanel> (controller),
+        juce::CallOutBox::launchAsynchronously (std::make_unique<MidiSettingsPanel> (controller, ai),
                                                 midiButton.getScreenBounds(), nullptr);
     };
 
@@ -314,6 +366,10 @@ HeaderBar::HeaderBar (SynthController& c, const juce::String& line, const juce::
 
     addAndMakeVisible (display);
     controller.addChangeListener (this);
+
+    if (ai != nullptr)
+        ai->addChangeListener (this);
+
     updateTuning();
     startTimerHz (20);
 }
@@ -322,6 +378,10 @@ HeaderBar::~HeaderBar()
 {
     // The editor closes: no tuning without its button
     controller.removeChangeListener (this);
+
+    if (ai != nullptr)
+        ai->removeChangeListener (this);
+
     controller.setTuning (false);
 }
 
@@ -369,10 +429,18 @@ void HeaderBar::timerCallback()
     if (sent != lastSent)         { lastSent = sent; txFlash = 3; }
     if (received != lastReceived) { lastReceived = received; rxFlash = 3; }
 
-    if (txFlash > 0 || rxFlash > 0)
+    if (ai != nullptr)
+    {
+        auto call = ai->getActivity().lastToolCallMs;
+
+        if (call != lastAiCallMs) { lastAiCallMs = call; aiFlash = 6; }
+    }
+
+    if (txFlash > 0 || rxFlash > 0 || aiFlash > 0)
     {
         txFlash = juce::jmax (0, txFlash - 1);
         rxFlash = juce::jmax (0, rxFlash - 1);
+        aiFlash = juce::jmax (0, aiFlash - 1);
         repaint (getLocalBounds().removeFromRight (62));
     }
 }
@@ -421,7 +489,10 @@ void HeaderBar::paint (juce::Graphics& g)
     g.setFont (theme::label (11.0f));
     g.drawText (versionLine(), logo, juce::Justification::centredLeft);
 
-    auto leds = getLocalBounds().removeFromRight (56).withSizeKeepingCentre (56, 60);
+    // The AI row only while AI control is on: dim while running, bright when it was just used
+    auto showAi = ai != nullptr && ai->getStatus() != AiControl::Status::off;
+    auto rowHeight = showAi ? 17 : 20;
+    auto leds = getLocalBounds().removeFromRight (56).withSizeKeepingCentre (56, rowHeight * (showAi ? 4 : 3));
     auto led = [&g] (juce::Rectangle<int> area, bool on, juce::Colour c, const char* text)
     {
         auto dot = area.removeFromLeft (14).withSizeKeepingCentre (9, 9).toFloat();
@@ -433,10 +504,19 @@ void HeaderBar::paint (juce::Graphics& g)
     };
 
     auto presence = controller.getPresence();
-    led (leds.removeFromTop (20), presence != SynthController::Presence::unknown,
+    led (leds.removeFromTop (rowHeight), presence != SynthController::Presence::unknown,
          presence == SynthController::Presence::present ? juce::Colour (0xff4cc35a) : theme::red, "SYNTH");
-    led (leds.removeFromTop (20), txFlash > 0, theme::orange, "TX");
-    led (leds, rxFlash > 0, theme::lcdText, "RX");
+    led (leds.removeFromTop (rowHeight), txFlash > 0, theme::orange, "TX");
+    led (leds.removeFromTop (rowHeight), rxFlash > 0, theme::lcdText, "RX");
+
+    if (showAi)
+    {
+        auto status = ai->getStatus();
+        auto colour = status == AiControl::Status::portBusy ? theme::red
+                    : aiFlash > 0 ? theme::accent
+                    : theme::accent.withMultipliedBrightness (0.45f);
+        led (leds.removeFromTop (rowHeight), status == AiControl::Status::running || status == AiControl::Status::portBusy, colour, "AI");
+    }
 }
 
 void HeaderBar::resized()

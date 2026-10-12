@@ -42,6 +42,147 @@ public:
     {
         protocol();
         tools();
+        http();
+    }
+
+    /** One HTTP exchange on an open socket; returns status and body. */
+    static std::pair<int, juce::String> exchange (juce::StreamingSocket& socket, const juce::String& request)
+    {
+        auto data = request.toStdString();
+        socket.write (data.data(), (int) data.size());
+
+        std::string received;
+        size_t headerEnd = std::string::npos, needed = 0;
+
+        for (int i = 0; i < 200; ++i)
+        {
+            if (socket.waitUntilReady (true, 20) > 0)
+            {
+                char buffer[4096];
+                auto n = socket.read (buffer, sizeof (buffer), false);
+
+                if (n <= 0)
+                    break;
+
+                received.append (buffer, (size_t) n);
+            }
+            else
+            {
+                juce::MessageManager::getInstance()->runDispatchLoopUntil (5);   // tools run on this thread
+            }
+
+            if (headerEnd == std::string::npos && (headerEnd = received.find ("\r\n\r\n")) != std::string::npos)
+            {
+                auto head = juce::String (received.substr (0, headerEnd));
+                auto length = head.fromFirstOccurrenceOf ("Content-Length: ", false, true).getIntValue();
+                needed = headerEnd + 4 + (size_t) length;
+            }
+
+            if (headerEnd != std::string::npos && received.size() >= needed)
+                break;
+        }
+
+        if (headerEnd == std::string::npos)
+            return { 0, {} };
+
+        auto status = juce::String (received.substr (9, 3)).getIntValue();
+        return { status, juce::String::fromUTF8 (received.data() + headerEnd + 4, (int) (received.size() - headerEnd - 4)) };
+    }
+
+    static juce::String post (const juce::String& body, int port)
+    {
+        return "POST /mcp HTTP/1.1\r\nHost: 127.0.0.1:" + juce::String (port) + "\r\nContent-Type: application/json\r\n"
+               "Accept: application/json, text/event-stream\r\n"
+               "Content-Length: " + juce::String ((int) body.getNumBytesAsUTF8()) + "\r\n\r\n" + body;
+    }
+
+    void http()
+    {
+        sso::McpServer server ("sso-test", "SSO Test", "1.0", "");
+        server.addTool ({ "echo", "Echo", "", sso::json::schema(), true, false,
+                          [] (const juce::var& a) { return sso::McpServer::ToolResult { "echo " + a["text"].toString() }; } });
+
+        auto port = 47900 + juce::Random::getSystemRandom().nextInt (90);
+        sso::McpHttpServer http (server, port);
+
+        beginTest ("HTTP rules: local only, POST /mcp, modern headers must match the body");
+        {
+            using Request = sso::McpHttpServer::Request;
+            auto request = [port] (juce::String body, std::initializer_list<std::pair<const char*, const char*>> headers = {})
+            {
+                Request r { "POST", "/mcp", {}, body };
+                r.headers.set ("host", "127.0.0.1:" + juce::String (port));
+
+                for (auto& [k, v] : headers)
+                    r.headers.set (k, v);
+
+                return r;
+            };
+
+            const juce::String init = R"({ "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": { "protocolVersion": "2025-06-18" } })";
+            expectEquals (http.respond (request (init)).status, 200);
+            expectEquals (http.respond (request (init, { { "host", "evil.example.com" } })).status, 403);
+            expectEquals (http.respond (request (init, { { "host", "localhost:1" } })).status, 403, "another port");
+            expectEquals (http.respond (request (init, { { "origin", "https://evil.example.com" } })).status, 403);
+            expectEquals (http.respond (request (init, { { "origin", "http://localhost:3000" } })).status, 200);
+
+            auto get = request ({});
+            get.method = "GET";
+            expectEquals (http.respond (get).status, 405);
+            auto wrongPath = request (init);
+            wrongPath.path = "/other";
+            expectEquals (http.respond (wrongPath).status, 404);
+
+            expectEquals (http.respond (request (R"({ "jsonrpc": "2.0", "method": "notifications/initialized" })")).status, 202);
+            expectEquals (http.respond (request ("{ nonsense")).status, 400);
+
+            const juce::String modern = R"({ "jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": { "name": "echo", "arguments": { "text": "a" },
+                                             "_meta": { "io.modelcontextprotocol/protocolVersion": "2026-07-28", "io.modelcontextprotocol/clientCapabilities": {} } } })";
+            auto ok = http.respond (request (modern, { { "mcp-protocol-version", "2026-07-28" }, { "mcp-method", "tools/call" }, { "mcp-name", "echo" } }));
+            expectEquals (ok.status, 200);
+            expect (ok.body.contains ("echo a"), ok.body);
+
+            auto encoded = http.respond (request (modern, { { "mcp-protocol-version", "2026-07-28" }, { "mcp-method", "tools/call" },
+                                                            { "mcp-name", "=?base64?ZWNobw==?=" } }));
+            expectEquals (encoded.status, 200, "base64 Mcp-Name");
+
+            auto missing = http.respond (request (modern, { { "mcp-protocol-version", "2026-07-28" }, { "mcp-method", "tools/call" } }));
+            expectEquals (missing.status, 400);
+            expect (missing.body.contains ("-32020"), missing.body);
+            expectEquals (http.respond (request (modern, { { "mcp-protocol-version", "2025-11-25" }, { "mcp-method", "tools/call" },
+                                                           { "mcp-name", "echo" } })).status, 400, "version header differs");
+        }
+
+        beginTest ("HTTP over a real socket: keep-alive, tool calls, port taken");
+        {
+            expect (http.start());
+
+            juce::StreamingSocket client;
+            expect (client.connect ("127.0.0.1", port, 2000));
+
+            auto first = exchange (client, post (R"({ "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": { "protocolVersion": "2025-11-25", "clientInfo": { "name": "test-client", "version": "1" } } })", port));
+            expectEquals (first.first, 200);
+            expect (first.second.contains ("\"protocolVersion\": \"2025-11-25\""), first.second);
+
+            auto second = exchange (client, post (juce::String::fromUTF8 (u8R"({ "jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": { "name": "echo", "arguments": { "text": "über" } } })"), port));
+            expectEquals (second.first, 200, "same connection");
+            expect (second.second.contains (juce::String::fromUTF8 (u8"echo über")), second.second);
+            expectEquals (server.getActivity().clientName, juce::String ("test-client"));
+            expect (server.getActivity().lastToolCallMs > 0);
+
+            auto third = exchange (client, post (R"({ "jsonrpc": "2.0", "method": "notifications/initialized" })", port));
+            expectEquals (third.first, 202);
+            expect (third.second.isEmpty());
+
+            sso::McpHttpServer other (server, port);
+            expect (! other.start(), "the port is taken");
+
+            client.close();
+            http.stop();
+
+            juce::StreamingSocket late;
+            expect (! late.connect ("127.0.0.1", port, 300), "stopped");
+        }
     }
 
     void protocol()
@@ -337,6 +478,48 @@ int runMcpCall (const juce::StringArray& args)
                                     + R"(", "arguments": )" + arguments + " } }");
     std::cout << reply.message["result"]["content"][0]["text"].toString() << std::endl;
     server.shutdown();
+    folder.getFile().deleteRecursively();
+    return 0;
+}
+
+/** A test MCP endpoint for manual checks with curl or an AI client, on a dummy MIDI port:
+    SSO_Tests --mcp-serve hawk800|kiwi3p|kiwisix <port> <seconds> */
+int runMcpServe (const juce::StringArray& args)
+{
+    auto i = args.indexOf ("--mcp-serve");
+    auto deviceId = args[i + 1];
+    std::unique_ptr<sso::DeviceDefinition> device;
+    std::unique_ptr<sso::PatchGenerator> generator;
+
+    if (deviceId == "hawk800")      { auto d = std::make_unique<sso::hawk800::Hawk800Device>(); generator = sso::hawk800::createGenerator (*d); device = std::move (d); }
+    else if (deviceId == "kiwisix") { auto d = std::make_unique<sso::kiwisix::KiwiSixDevice>(); generator = sso::kiwisix::createGenerator (*d); device = std::move (d); }
+    else                            { auto d = std::make_unique<sso::kiwi3p::Kiwi3PDevice>(); generator = sso::kiwi3p::createGenerator (*d); device = std::move (d); }
+
+    McpDummyProcessor processor;
+    juce::AudioProcessorValueTreeState state (processor, nullptr, "test", sso::SynthController::createParameterLayout (*device));
+    sso::SynthController controller (*device, state);
+    controller.getConnection().setInput ({});
+    controller.getConnection().setOutput ("SSO-TEST-PORT-mcp-serve");
+    controller.startUsing();
+
+    juce::TemporaryFile folder;
+    folder.getFile().createDirectory();
+    sso::PresetLibrary library (*device, folder.getFile());
+    sso::SynthTools tools ({ "SSO test " + deviceId, "0.0.0", controller, library, generator.get() });
+    sso::McpServer server ("sso-" + deviceId, "SSO test " + deviceId, "0.0.0", tools.instructions());
+    tools.addTo (server);
+    sso::McpHttpServer http (server, args[i + 2].getIntValue());
+
+    if (! http.start())
+    {
+        std::cout << "port busy" << std::endl;
+        return 1;
+    }
+
+    std::cout << "serving " << http.getUrl() << std::endl;
+    juce::MessageManager::getInstance()->runDispatchLoopUntil (juce::jmax (1, args[i + 3].getIntValue()) * 1000);
+    server.shutdown();
+    http.stop();
     folder.getFile().deleteRecursively();
     return 0;
 }
