@@ -177,37 +177,6 @@ public:
             sso::McpHttpServer other (server, port);
             expect (! other.start(), "the port is taken");
 
-            // The stdio bridge forwards lines, mirrors the modern headers and keeps its connection
-            sso::McpBridge bridge (port, "SSO Test");
-            auto init = bridge.handleLine (R"({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}})");
-            expect (init.contains ("\"protocolVersion\": \"2025-06-18\"") && ! init.containsChar ('\n'), init);
-            expect (bridge.handleLine (R"({"jsonrpc":"2.0","method":"notifications/initialized"})").isEmpty());
-
-            juce::String modernReply;
-            std::thread worker ([&]
-            {
-                modernReply = bridge.handleLine (R"({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"echo","arguments":{"text":"b"},)"
-                                                 R"("_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}})");
-            });
-
-            for (int i = 0; i < 100 && modernReply.isEmpty(); ++i)
-                juce::MessageManager::getInstance()->runDispatchLoopUntil (10);
-
-            worker.join();
-            expect (modernReply.contains ("echo b") && modernReply.contains ("\"resultType\": \"complete\""), modernReply);
-
-            auto headers = sso::McpBridge::headersFor (juce::JSON::parse (juce::String::fromUTF8 (
-                u8R"({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"grüße","_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}})")));
-            expectEquals (headers["Mcp-Method"], juce::String ("tools/call"));
-            expect (headers["Mcp-Name"].startsWith ("=?base64?"), "non-ASCII names are base64-encoded");
-
-            sso::McpBridge nobody (port + 1, "SSO Nobody");
-            auto failedCall = nobody.handleLine (R"({"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"echo"}})");
-            expect (failedCall.contains ("\"isError\": true") && failedCall.contains ("not reachable"), failedCall);
-            auto failedInit = nobody.handleLine (R"({"jsonrpc":"2.0","id":5,"method":"initialize","params":{}})");
-            expect (failedInit.contains ("\"error\"") && failedInit.contains ("switch on AI control"), failedInit);
-            expect (nobody.handleLine ("not json").contains ("-32700"));
-
             client.close();
             http.stop();
 

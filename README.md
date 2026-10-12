@@ -69,7 +69,7 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 ```
 
-To install the VST3 plugins (and the AI control bridge `sso-mcp.exe`), run `install-vst3.ps1` from an administrator PowerShell
+To install the VST3 plugins, run `install-vst3.ps1` from an administrator PowerShell
 (`powershell -ExecutionPolicy Bypass -File .\install-vst3.ps1`).
 
 ## License

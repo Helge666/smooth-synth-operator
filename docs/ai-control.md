@@ -37,37 +37,17 @@ answers.
 
 ## 2. Connect your AI program
 
-**Claude Code** (and other programs that accept an MCP server URL, "Streamable HTTP"):
+Any AI program that connects to an MCP server by its address ("Streamable HTTP") can use the
+app directly - nothing else to install. Click **COPY ADDRESS** in the MIDI window and enter the
+address in your AI program. For Claude Code that is one command:
 
 ```
 claude mcp add --transport http --scope user sso-hawk800 http://127.0.0.1:47833/mcp
 ```
 
-**Claude Desktop** (and other programs that start MCP servers as programs, "stdio"): they need
-the small bridge `sso-mcp.exe`, which `install-vst3.ps1` copies to
-`C:\Program Files\Smooth Synth Operator\`. In Claude Desktop open *Settings > Developer >
-Edit Config* and add one entry per synth:
-
-```json
-{
-  "mcpServers": {
-    "sso-hawk800": {
-      "command": "C:\\Program Files\\Smooth Synth Operator\\sso-mcp.exe",
-      "args": ["hawk800"]
-    },
-    "sso-kiwi3p": {
-      "command": "C:\\Program Files\\Smooth Synth Operator\\sso-mcp.exe",
-      "args": ["kiwi3p"]
-    },
-    "sso-kiwisix": {
-      "command": "C:\\Program Files\\Smooth Synth Operator\\sso-mcp.exe",
-      "args": ["kiwisix"]
-    }
-  }
-}
-```
-
-Restart Claude Desktop afterwards.
+Programs that can only start MCP servers as programs of their own (currently Claude Desktop)
+would need an extra bridge program and are not supported - the apps install nothing besides
+the standalone app and the plugin.
 
 ## 3. Use it
 
@@ -80,8 +60,8 @@ Start the app first, then ask, for example:
 
 ## Troubleshooting
 
-- **"... is not reachable"**: the app is not running, AI control is off, or another instance
-  controls the synth (TAKE OVER).
+- **The AI program cannot connect**: the app is not running, AI control is off, or another
+  instance controls the synth (TAKE OVER).
 - **"Port ... is used by another program"** in the MIDI window: another program already uses
   that port; the app tries again every 5 seconds.
 - **The AI says it cannot change anything while tuning**: TUNE is on; switch it off.
