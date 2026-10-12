@@ -8,6 +8,9 @@ Programmers:
 - **SSO Kiwi-3P** for the Roland JX-3P with the KiwiTechnics Kiwi-3P upgrade, inspired by the Retroaktiv PG-2K
 - **SSO KiwiSix** for the Korg PolySix with the KiwiTechnics KiwiSix upgrade (firmware v5.00) -
   12-bit knobs, 512 memories in banks A-H, PolySix look
+- **SSO Hawk-800** for the Korg Poly-800 with the HAWK-800 upgrade (software v2.68) - all 64
+  original and 64 extended parameters (minus MK2 effects and AtomaHawk-only ones), 4 banks of 64
+  memories, names kept by the app (the synth stores none), Poly-800 look
 
 ## Status
 
@@ -38,10 +41,10 @@ For step-by-step details (which instance owns the synth and why), create an empt
 |---|---|
 | `framework/sso_core` | Device-independent JUCE module: parameter model, MIDI, controller, generic GUI |
 | `devices/sso_kiwitechnics` | SysEx handling shared by KiwiTechnics upgrades |
-| `devices/sso_kiwi3p`, `devices/sso_kiwisix` | Device definitions and sound generators |
-| `apps/SSO-Kiwi3P`, `apps/SSO-KiwiSix` | Standalone + VST3 plugins (device panel only; processor/editor live in `sso_core/plugin`) |
+| `devices/sso_kiwi3p`, `devices/sso_kiwisix`, `devices/sso_hawk800` | Device definitions and sound generators |
+| `apps/SSO-Kiwi3P`, `apps/SSO-KiwiSix`, `apps/SSO-Hawk800` | Standalone + VST3 plugins (device panel only; processor/editor live in `sso_core/plugin`) |
 | `tests` | Unit tests and a hardware test (`SSO_Tests --hardware "<port name part>"`) |
-| `docs` | Measured MIDI behaviour of the Kiwi-3P and the KiwiSix, firmware update notes |
+| `docs` | Measured MIDI behaviour of the Kiwi-3P, the KiwiSix and the HAWK-800, firmware update notes |
 
 ## Building (Windows)
 

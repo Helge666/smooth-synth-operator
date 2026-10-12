@@ -1,14 +1,16 @@
 #include <sso_kiwi3p/sso_kiwi3p.h>
 #include <sso_kiwisix/sso_kiwisix.h>
+#include <sso_hawk800/sso_hawk800.h>
 
 /*  sso-cli - library maintenance from the command line
 
-    All commands take [--device kiwi3p|kiwisix] (default kiwi3p).
+    All commands take [--device kiwi3p|kiwisix|hawk800] (default kiwi3p).
 
     sso-cli import <file.syx> --bank <name> [--slots A-1:B-16] [--skip-generic]
                               [--author <name>] [--root <library dir>]
     sso-cli list [--bank <name>] [--root <library dir>]
     sso-cli generate <category|all> --count <n> --out <file.syx> [--seed <n>]
+    sso-cli import-hawk-factory <folder with Bank1-4.syx> [--bank <name>] --device hawk800
 */
 
 namespace
@@ -34,7 +36,7 @@ namespace
                      "  sso-cli import <file.syx> --bank <name> [--slots A-1:B-16] [--skip-generic] [--author <name>] [--root <dir>]\n"
                      "  sso-cli list [--bank <name>] [--root <dir>]\n"
                      "  sso-cli generate <category|all> --count <n> --out <file.syx> [--seed <n>]\n"
-                     "  all commands: [--device kiwi3p|kiwisix]\n";
+                     "  all commands: [--device kiwi3p|kiwisix|hawk800]\n";
         return 2;
     }
 }
@@ -52,6 +54,8 @@ int main (int argc, char* argv[])
 
     if (deviceName == "kiwisix")
         devicePtr = std::make_unique<sso::kiwisix::KiwiSixDevice>();
+    else if (deviceName == "hawk800")
+        devicePtr = std::make_unique<sso::hawk800::Hawk800Device>();
     else if (deviceName == "kiwi3p")
         devicePtr = std::make_unique<sso::kiwi3p::Kiwi3PDevice>();
     else
@@ -78,9 +82,9 @@ int main (int argc, char* argv[])
 
     if (args[0] == "generate" && args.size() >= 2)
     {
-        auto generator = deviceName == "kiwisix"
-                             ? sso::kiwisix::createGenerator (static_cast<const sso::kiwisix::KiwiSixDevice&> (device))
-                             : sso::kiwi3p::createGenerator (static_cast<const sso::kiwi3p::Kiwi3PDevice&> (device));
+        auto generator = deviceName == "kiwisix" ? sso::kiwisix::createGenerator (static_cast<const sso::kiwisix::KiwiSixDevice&> (device))
+                       : deviceName == "hawk800" ? sso::hawk800::createGenerator (static_cast<const sso::hawk800::Hawk800Device&> (device))
+                                                 : sso::kiwi3p::createGenerator (static_cast<const sso::kiwi3p::Kiwi3PDevice&> (device));
         auto categories = args[1] == "all" ? generator->getCategories() : juce::StringArray { args[1] };
         auto count = juce::jmax (1, option (args, "--count", "1").getIntValue());
         juce::Random random (option (args, "--seed", juce::String (juce::Time::currentTimeMillis())).getLargeIntValue());
@@ -105,6 +109,14 @@ int main (int argc, char* argv[])
         out.replaceWithData (syx.getData(), syx.getDataSize());
         std::cout << "wrote " << out.getFullPathName() << std::endl;
         return 0;
+    }
+
+    if (args[0] == "import-hawk-factory" && args.size() >= 2 && deviceName == "hawk800")
+    {
+        auto result = sso::hawk800::importFactoryBanks (library, static_cast<const sso::hawk800::Hawk800Device&> (device),
+                                                        juce::File (args[1]), option (args, "--bank", "HAWK Factory"));
+        std::cout << "imported " << result.imported << " -> " << library.getRoot().getFullPathName() << std::endl;
+        return result.imported > 0 ? 0 : 1;
     }
 
     if (args[0] == "import" && args.size() >= 2)

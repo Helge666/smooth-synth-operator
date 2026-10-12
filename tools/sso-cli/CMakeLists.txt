@@ -12,6 +12,7 @@ target_link_libraries(SSO_CLI
         sso_kiwitechnics
         sso_kiwi3p
         sso_kiwisix
+        sso_hawk800
         juce::juce_audio_utils
     PUBLIC
         juce::juce_recommended_config_flags

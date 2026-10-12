@@ -81,6 +81,47 @@ namespace sso::theme
         woodCheeks = true;
     }
 
+    /** Korg Poly-800: black plastic case with white print, red LED display. Dark knobs with
+        white pointers, light blue value arcs and selections. */
+    inline void usePoly800Palette()
+    {
+        background   = juce::Colour (0xff0e0f11);
+        panel        = juce::Colour (0xff15161a);
+        sidebar      = juce::Colour (0xff08090a);
+        control      = juce::Colour (0xff22242a);
+        controlHover = juce::Colour (0xff2c2f36);
+        slot         = juce::Colour (0xff050506);
+        outline      = juce::Colour (0xff3a3d45);
+        text         = juce::Colour (0xffecece6);
+        textDim      = juce::Colour (0xff9ea1a9);
+        textOff      = juce::Colour (0xff5c5f68);
+
+        orange       = juce::Colour (0xffe8742c);
+        red          = juce::Colour (0xffd83a26);
+        blue         = juce::Colour (0xff5ab0e8);
+        accent       = blue;
+        ledOn        = juce::Colour (0xffff3b2a);
+        ledOff       = juce::Colour (0xff3a1a16);
+
+        lcdBackground = juce::Colour (0xff1a0504);
+        lcdBorder     = juce::Colour (0xff3a1410);
+        lcdText       = juce::Colour (0xffff5a3a);
+        lcdDim        = juce::Colour (0xffb8402a);
+
+        knobCap     = juce::Colour (0xff2a2c31);
+        knobSkirt   = juce::Colour (0xff55585f);
+        knobPointer = juce::Colour (0xffecece6);
+        knobArc     = blue;
+
+        tabbedSections = true;
+        sectionOutline = juce::Colour (0xff55585f);
+        tabFill        = juce::Colour (0xffecece6);
+        tabText        = juce::Colour (0xff0e0f11);
+        headerStrip = true;
+        headerStripColour = juce::Colour (0xff050506);
+        woodCheeks = false;
+    }
+
     /** Condensed UI font (Bahnschrift ships with Windows 10+, falls back to the default sans). */
     inline juce::Font label (float height, bool bold = false)
     {

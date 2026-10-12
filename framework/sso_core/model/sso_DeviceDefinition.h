@@ -79,6 +79,26 @@ public:
 
     virtual std::optional<IncomingPatch> parsePatchDump (const MidiSettings&, const juce::MidiMessage&) const = 0;
 
+    /** All sounds of a message holding several (e.g. a whole bank in one SysEx), for importing
+        files. Their `slot` counts from 0 within the message. */
+    virtual std::vector<IncomingPatch> parseBulkDump (const MidiSettings&, const juce::MidiMessage&) const { return {}; }
+
+    /** False for synths that keep no names: the name then lives only in the app's copy of
+        the patch (bytes the synth never receives), and stored sounds are named by matching
+        them with the library. */
+    virtual bool storesPatchNames() const   { return true; }
+
+    //==============================================================================
+    /** Synths that address stored sounds only within the selected bank (HAWK-800): the bank
+        of a slot, or -1 when slots are addressed directly. Slot requests and dumps then
+        follow a bank select, and dumps the synth sends report the slot within the bank. */
+    virtual int getSlotBank (int /*slot*/) const    { return -1; }
+    virtual juce::MidiMessage createBankSelect (const MidiSettings&, int /*bank*/) const   { return {}; }
+
+    /** The bank selected on the synth's panel, read from its global dump (-1 = unknown) -
+        selected again after the app has read or written other banks. */
+    virtual int getSelectedBank (const std::vector<uint8_t>& /*globalDump*/) const       { return -1; }
+
     //==============================================================================
     /** Synth-wide settings that are not part of a sound (tuning, arpeggiator clock, ...).
         Only musical ones belong here - never MIDI channels or MIDI enables, which the app

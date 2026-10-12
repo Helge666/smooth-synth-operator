@@ -29,17 +29,20 @@ class KnobStrip : public juce::Component,
                   public juce::SettableTooltipClient
 {
 public:
-    KnobStrip (const ParamSpec&, juce::AudioProcessorValueTreeState&, const juce::String& label = {});
+    KnobStrip (const ParamSpec&, juce::AudioProcessorValueTreeState&, const juce::String& label = {}, int knobSize = 64);
 
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    static constexpr int preferredWidth = 70;
-    static constexpr int knobSize = 64;
+    static constexpr int defaultKnobSize = 64;
     static constexpr int spacing = 6;
+    static constexpr int textHeight = 38;      // name and value below the knob
+
+    static int widthFor (int knobSize) noexcept     { return knobSize + 6; }
 
 private:
     const ParamSpec& spec;
+    const int knobSize;
     juce::String label;
     juce::Slider slider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
@@ -52,7 +55,8 @@ class ChoiceButtons : public juce::Component,
 {
 public:
     ChoiceButtons (const ParamSpec&, juce::AudioProcessorValueTreeState&,
-                   const juce::String& label = {}, const juce::StringArray& shortNames = {}, int maxColumns = 0);
+                   const juce::String& label = {}, const juce::StringArray& shortNames = {}, int maxColumns = 0,
+                   std::vector<int> flags = {});
 
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
@@ -67,7 +71,10 @@ private:
     juce::String label;
     juce::StringArray names;
     int maxColumns = 0;     // 0 = as many as fit
+    std::vector<int> flags; // value -> buttons lit (bit i = button i); empty = one button per value
     int current = 0;
+
+    bool isLit (int button) const;
     juce::ParameterAttachment attachment;
 };
 
@@ -95,21 +102,23 @@ private:
 };
 
 //==============================================================================
-/** ADSR shape drawn from four parameters, LCD style. */
+/** Envelope shape drawn from its parameters, LCD style: attack, decay, sustain, release - or
+    attack, decay, break point, slope, sustain, release (Korg style: decay falls to the break
+    point level, slope then moves to the sustain level). */
 class EnvelopeGraph : public juce::Component,
                       private juce::Timer
 {
 public:
-    EnvelopeGraph (const SynthController&, std::array<int, 4> adsrParamIndices);
+    EnvelopeGraph (const SynthController&, std::vector<int> paramIndices);
     void paint (juce::Graphics&) override;
 
 private:
     void timerCallback() override;
 
     const SynthController& controller;
-    std::array<int, 4> indices;
-    std::array<int, 4> maxValues { 127, 127, 127, 127 };
-    std::array<int, 4> shown { -1, -1, -1, -1 };
+    std::vector<int> indices;
+    std::vector<int> maxValues;
+    std::vector<int> shown;
 };
 
 //==============================================================================
@@ -117,7 +126,13 @@ private:
 struct SectionDef
 {
     struct Fader    { juce::String id, label; };
-    struct Selector { juce::String id, label; juce::StringArray shortNames; int columns = 0; };
+    struct Selector
+    {
+        juce::String id, label;
+        juce::StringArray shortNames;
+        int columns = 0;
+        std::vector<int> flags;     // optional: shortNames are switches, flags[value] says which are on
+    };
     struct Toggles  { juce::String label; juce::StringArray ids, names; };
 
     juce::String title;
@@ -126,9 +141,12 @@ struct SectionDef
     int selectorWidth = 120;
     std::vector<Fader> faders;
     std::vector<Selector> selectors;
-    std::array<juce::String, 4> envelope;   // ADSR parameter ids for a graph, optional
+    std::vector<juce::String> envelope;     // ADSR (or A D BP SL S R) parameter ids for a graph, optional
     std::vector<Toggles> toggles;           // groups of on/off switches below the selectors
     bool knobs = false;                     // rotary knobs instead of faders
+    int knobSize = KnobStrip::defaultKnobSize;
+    int knobColumns = 0;                    // knobs per row, 0 = all in one row
+    int graphHeight = 64;
     juce::String subtitle;                  // small text next to the title (tabbed style)
 };
 
@@ -148,6 +166,7 @@ public:
 
 private:
     int stripWidth() const noexcept;
+    int stripsPerRow() const noexcept;
 
     SectionDef def;
     std::vector<std::unique_ptr<juce::Component>> faders;     // FaderStrip or KnobStrip

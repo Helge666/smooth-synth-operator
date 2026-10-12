@@ -408,11 +408,13 @@ void SynthController::sendToSynth()
 
 void SynthController::writeToSlot (int slot)
 {
-    sender.enqueue (device.createSlotDump (getMidiSettings(), getCurrentPatch(), slot));
+    writePatchToSlot (getCurrentPatch(), slot);
 }
 
 void SynthController::writePatchToSlot (const Patch& patch, int slot)
 {
+    synthBank = -1;     // a write always selects its bank: the user may have changed it on the panel
+    selectBankFor (slot);
     sender.enqueue (device.createSlotDump (getMidiSettings(), patch, slot));
 }
 
@@ -429,7 +431,37 @@ void SynthController::silence()
 
 void SynthController::requestSlot (int slot)
 {
+    selectBankFor (slot);
     sender.enqueue (device.createSlotRequest (getMidiSettings(), slot));
+}
+
+void SynthController::selectBankFor (int slot)
+{
+    auto bank = device.getSlotBank (slot);
+
+    if (bank < 0 || bank == synthBank)
+        return;
+
+    sender.enqueue (device.createBankSelect (getMidiSettings(), bank));
+    synthBank = bank;
+}
+
+void SynthController::beginSlotAccess()
+{
+    accessingSlots = true;
+    synthBank = -1;     // select the bank again before the first access
+}
+
+void SynthController::endSlotAccess()
+{
+    accessingSlots = false;
+
+    // Leave the synth on the bank the user had selected on its panel
+    if (panelBank >= 0 && synthBank >= 0 && synthBank != panelBank)
+    {
+        sender.enqueue (device.createBankSelect (getMidiSettings(), panelBank));
+        synthBank = panelBank;
+    }
 }
 
 void SynthController::setPresetRef (PresetRef ref)
@@ -497,6 +529,9 @@ void SynthController::handleIncomingMessage (const juce::MidiMessage& m)
 
     if (auto globals = device.parseGlobalsDump (getMidiSettings(), m))
     {
+        if (auto bank = device.getSelectedBank (*globals); bank >= 0 && ! accessingSlots)
+            panelBank = synthBank = bank;
+
         if (! std::exchange (globalsRequested, false))
             return;     // answer to a presence probe
 
@@ -519,6 +554,16 @@ void SynthController::handleIncomingMessage (const juce::MidiMessage& m)
 
     if (incoming->slot >= 0)
     {
+        // Bank-relative slot numbers: in the bank we selected
+        if (device.getSlotBank (0) >= 0)
+        {
+            if (synthBank < 0)
+                return;
+
+            auto layout = device.getSlotLayout();
+            incoming->slot += synthBank * layout.groupsPerBank * layout.slotsPerGroup;
+        }
+
         if (onSlotReceived != nullptr)
             onSlotReceived (*incoming);
 
@@ -526,6 +571,11 @@ void SynthController::handleIncomingMessage (const juce::MidiMessage& m)
     }
 
     lastReceive = juce::Time::getCurrentTime();
+
+    // A synth without names sends none: keep ours while it still is the same sound
+    if (! device.storesPatchNames() && device.asStored (incoming->patch) == device.asStored (getCurrentPatch()))
+        device.setPatchName (incoming->patch, getPatchName());
+
     basePatch = incoming->patch;
     applyPatchToParameters (basePatch);
     setSyncState (SyncState::inSync);

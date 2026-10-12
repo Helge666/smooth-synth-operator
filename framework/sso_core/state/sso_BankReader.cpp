@@ -24,6 +24,7 @@ void BankReader::start (std::vector<int> slotsToRead,
     running = true;
 
     controller.onSlotReceived = [this] (const DeviceDefinition::IncomingPatch& p) { received (p); };
+    controller.beginSlotAccess();
     requestCurrent();
 }
 
@@ -78,6 +79,7 @@ void BankReader::finish (bool complete)
     stopTimer();
     running = false;
     controller.onSlotReceived = nullptr;
+    controller.endSlotAccess();
 
     // The requests replaced the synth's edit buffer - put the editor's sound back.
     if (restoreAfterwards)

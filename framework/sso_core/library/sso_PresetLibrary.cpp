@@ -187,6 +187,12 @@ std::vector<DeviceDefinition::IncomingPatch> PresetLibrary::parseSyx (const juce
                 result.push_back (std::move (*incoming));
                 break;
             }
+
+            if (auto bulk = device.parseBulkDump (anyDevice, m); ! bulk.empty())
+            {
+                result.insert (result.end(), bulk.begin(), bulk.end());
+                break;
+            }
         }
     }
 

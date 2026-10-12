@@ -88,8 +88,8 @@ void FaderStrip::paint (juce::Graphics& g)
 }
 
 //==============================================================================
-KnobStrip::KnobStrip (const ParamSpec& s, juce::AudioProcessorValueTreeState& state, const juce::String& l)
-    : spec (s), label (l.isEmpty() ? s.name.toUpperCase() : l)
+KnobStrip::KnobStrip (const ParamSpec& s, juce::AudioProcessorValueTreeState& state, const juce::String& l, int size)
+    : spec (s), knobSize (size), label (l.isEmpty() ? s.name.toUpperCase() : l)
 {
     slider.setSliderStyle (juce::Slider::RotaryVerticalDrag);
     slider.setRotaryParameters (juce::degreesToRadians (-135.0f), juce::degreesToRadians (135.0f), true);
@@ -126,12 +126,14 @@ static constexpr int choiceButtonHeight = 26;
 static constexpr int choiceLabelHeight = 16;
 
 ChoiceButtons::ChoiceButtons (const ParamSpec& s, juce::AudioProcessorValueTreeState& state,
-                              const juce::String& l, const juce::StringArray& shortNames, int columns)
+                              const juce::String& l, const juce::StringArray& shortNames, int columns,
+                              std::vector<int> flagsOfValue)
     : spec (s),
       label (l.isEmpty() ? s.name.toUpperCase() : l),
       names (! shortNames.isEmpty() ? shortNames
                                     : (s.kind == ParamSpec::Kind::toggle ? juce::StringArray { "OFF", "ON" } : s.choices)),
       maxColumns (columns),
+      flags (std::move (flagsOfValue)),
       attachment (*state.getParameter (s.id), [this] (float v) { current = juce::roundToInt (v); repaint(); })
 {
     attachment.sendInitialUpdate();
@@ -170,7 +172,7 @@ void ChoiceButtons::paint (juce::Graphics& g)
     for (int i = 0; i < names.size(); ++i)
     {
         auto b = getButtonBounds (i, getWidth()).toFloat();
-        auto selected = i == current;
+        auto selected = isLit (i);
 
         g.setColour (theme::control);
         g.fillRoundedRectangle (b, 3.0f);
@@ -192,11 +194,36 @@ void ChoiceButtons::paint (juce::Graphics& g)
     }
 }
 
+bool ChoiceButtons::isLit (int button) const
+{
+    if (flags.empty())
+        return button == current;
+
+    return juce::isPositiveAndBelow (current, (int) flags.size()) && (flags[(size_t) current] & (1 << button)) != 0;
+}
+
 void ChoiceButtons::mouseDown (const juce::MouseEvent& e)
 {
     for (int i = 0; i < names.size(); ++i)
-        if (getButtonBounds (i, getWidth()).contains (e.getPosition()))
+    {
+        if (! getButtonBounds (i, getWidth()).contains (e.getPosition()))
+            continue;
+
+        if (flags.empty())
+        {
             attachment.setValueAsCompleteGesture ((float) i);
+            return;
+        }
+
+        // Switch this button, then pick the value with exactly that combination
+        auto wanted = (juce::isPositiveAndBelow (current, (int) flags.size()) ? flags[(size_t) current] : 0) ^ (1 << i);
+
+        for (size_t v = 0; v < flags.size(); ++v)
+            if (flags[v] == wanted)
+                attachment.setValueAsCompleteGesture ((float) v);
+
+        return;
+    }
 }
 
 //==============================================================================
@@ -270,21 +297,24 @@ void ToggleGroup::mouseDown (const juce::MouseEvent& e)
 }
 
 //==============================================================================
-EnvelopeGraph::EnvelopeGraph (const SynthController& c, std::array<int, 4> adsr)
-    : controller (c), indices (adsr)
+EnvelopeGraph::EnvelopeGraph (const SynthController& c, std::vector<int> paramIndices)
+    : controller (c), indices (std::move (paramIndices))
 {
-    for (size_t i = 0; i < 4; ++i)
-        maxValues[i] = juce::jmax (1, c.getDevice().getParams()[(size_t) adsr[i]].maxValue);
+    jassert (indices.size() == 4 || indices.size() == 6);
 
+    for (auto index : indices)
+        maxValues.push_back (juce::jmax (1, c.getDevice().getParams()[(size_t) index].maxValue));
+
+    shown.assign (indices.size(), -1);
     startTimerHz (20);
 }
 
 void EnvelopeGraph::timerCallback()
 {
-    std::array<int, 4> now;
+    std::vector<int> now;
 
-    for (size_t i = 0; i < 4; ++i)
-        now[i] = controller.getValue (indices[i]);
+    for (auto index : indices)
+        now.push_back (controller.getValue (index));
 
     if (now != shown)
     {
@@ -301,18 +331,36 @@ void EnvelopeGraph::paint (juce::Graphics& g)
 
     auto area = r.reduced (6.0f, 6.0f);
     auto norm = [this] (size_t i) { return (float) shown[i] / (float) maxValues[i]; };
-    auto unit = area.getWidth() / (3.0f + 40.0f / 127.0f);   // A, D, R share the width, sustain plateau fixed
-    auto a = norm (0) * unit, d = norm (1) * unit, rel = norm (3) * unit;
-    auto sustainY = area.getBottom() - norm (2) * area.getHeight();
     auto x0 = area.getX(), bottom = area.getBottom();
-
+    auto level = [&] (float n) { return bottom - n * area.getHeight(); };
     juce::Path p;
     p.startNewSubPath (x0, bottom);
-    p.lineTo (x0 + a, area.getY());
-    p.lineTo (x0 + a + d, sustainY);
-    auto plateau = 40.0f / 127.0f * unit;
-    p.lineTo (x0 + a + d + plateau, sustainY);
-    p.lineTo (x0 + a + d + plateau + rel, bottom);
+
+    if (indices.size() == 6)
+    {
+        // A, D (to the break point), slope (to sustain), a fixed plateau and R share the width
+        auto unit = area.getWidth() / (4.0f + 40.0f / 127.0f);
+        auto x = x0 + norm (0) * unit;
+        p.lineTo (x, area.getY());
+        x += norm (1) * unit;
+        p.lineTo (x, level (norm (2)));
+        x += norm (3) * unit;
+        p.lineTo (x, level (norm (4)));
+        x += 40.0f / 127.0f * unit;
+        p.lineTo (x, level (norm (4)));
+        p.lineTo (x + norm (5) * unit, bottom);
+    }
+    else
+    {
+        auto unit = area.getWidth() / (3.0f + 40.0f / 127.0f);   // A, D, R share the width, sustain plateau fixed
+        auto a = norm (0) * unit, d = norm (1) * unit, rel = norm (3) * unit;
+        auto sustainY = level (norm (2));
+        p.lineTo (x0 + a, area.getY());
+        p.lineTo (x0 + a + d, sustainY);
+        auto plateau = 40.0f / 127.0f * unit;
+        p.lineTo (x0 + a + d + plateau, sustainY);
+        p.lineTo (x0 + a + d + plateau + rel, bottom);
+    }
 
     g.setColour (theme::lcdText);
     g.strokePath (p, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
@@ -331,7 +379,7 @@ SectionPanel::SectionPanel (const SectionDef& d, SynthController& controller, ju
         auto& spec = device.getParams()[(size_t) index];
 
         if (def.knobs)
-            faders.push_back (std::make_unique<KnobStrip> (spec, state, f.label));
+            faders.push_back (std::make_unique<KnobStrip> (spec, state, f.label, def.knobSize));
         else
             faders.push_back (std::make_unique<FaderStrip> (spec, state, f.label));
 
@@ -342,7 +390,8 @@ SectionPanel::SectionPanel (const SectionDef& d, SynthController& controller, ju
     {
         auto index = device.indexOf (s.id);
         jassert (index >= 0);
-        selectors.push_back (std::make_unique<ChoiceButtons> (device.getParams()[(size_t) index], state, s.label, s.shortNames, s.columns));
+        selectors.push_back (std::make_unique<ChoiceButtons> (device.getParams()[(size_t) index], state, s.label, s.shortNames,
+                                                              s.columns, s.flags));
         addAndMakeVisible (*selectors.back());
     }
 
@@ -361,12 +410,15 @@ SectionPanel::SectionPanel (const SectionDef& d, SynthController& controller, ju
         addAndMakeVisible (*toggles.back());
     }
 
-    if (def.envelope[0].isNotEmpty())
+    if (! def.envelope.empty())
     {
-        std::array<int, 4> idx;
+        std::vector<int> idx;
 
-        for (size_t i = 0; i < 4; ++i)
-            idx[i] = device.indexOf (def.envelope[i]);
+        for (auto& id : def.envelope)
+        {
+            idx.push_back (device.indexOf (id));
+            jassert (idx.back() >= 0);
+        }
 
         graph = std::make_unique<EnvelopeGraph> (controller, idx);
         addAndMakeVisible (*graph);
@@ -380,13 +432,18 @@ void SectionPanel::paint (juce::Graphics& g)
 
 int SectionPanel::stripWidth() const noexcept
 {
-    return def.knobs ? KnobStrip::preferredWidth + KnobStrip::spacing
+    return def.knobs ? KnobStrip::widthFor (def.knobSize) + KnobStrip::spacing
                      : FaderStrip::preferredWidth + FaderStrip::spacing;
+}
+
+int SectionPanel::stripsPerRow() const noexcept
+{
+    return def.knobColumns > 0 ? juce::jmin (def.knobColumns, (int) faders.size()) : (int) faders.size();
 }
 
 int SectionPanel::getPreferredWidth() const
 {
-    auto w = 24 + (int) faders.size() * stripWidth();
+    auto w = 24 + stripsPerRow() * stripWidth();
 
     if (! selectors.empty() || ! toggles.empty() || graph != nullptr)
         w += (faders.empty() ? 0 : 8) + def.selectorWidth;
@@ -399,12 +456,17 @@ void SectionPanel::resized()
     auto r = getLocalBounds().withTrimmedTop (titleHeight + (def.knobs ? 8 : 0)).reduced (12, 0).withTrimmedBottom (10);
     auto spacing = def.knobs ? KnobStrip::spacing : FaderStrip::spacing;
 
-    auto faderArea = r.removeFromLeft ((int) faders.size() * stripWidth());
+    auto faderArea = r.removeFromLeft (stripsPerRow() * stripWidth());
+    auto knobHeight = def.knobSize + KnobStrip::textHeight;
+    auto perRow = juce::jmax (1, stripsPerRow());
 
-    for (auto& f : faders)
+    for (size_t i = 0; i < faders.size(); ++i)
     {
-        auto strip = faderArea.removeFromLeft (stripWidth()).withTrimmedRight (spacing);
-        f->setBounds (def.knobs ? strip.withHeight (KnobStrip::knobSize + 38) : strip);
+        auto column = (int) i % perRow, row = (int) i / perRow;
+        auto strip = juce::Rectangle<int> (faderArea.getX() + column * stripWidth(), faderArea.getY(),
+                                           stripWidth(), faderArea.getHeight()).withTrimmedRight (spacing);
+
+        faders[i]->setBounds (def.knobs ? strip.withY (strip.getY() + row * (knobHeight + 4)).withHeight (knobHeight) : strip);
     }
 
     if (! faders.empty())
@@ -412,7 +474,7 @@ void SectionPanel::resized()
 
     if (graph != nullptr)
     {
-        graph->setBounds (r.removeFromTop (64));
+        graph->setBounds (r.removeFromTop (def.graphHeight));
         r.removeFromTop (6);
     }
 

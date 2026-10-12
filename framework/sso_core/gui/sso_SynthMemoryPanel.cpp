@@ -138,7 +138,7 @@ void SynthMemoryPanel::paint (juce::Graphics& g)
         g.setFont (theme::label (12.0f, true));
         g.drawText (device.getSlotName (slot), inner.removeFromTop (14), juce::Justification::centredLeft);
 
-        auto name = patch.has_value() ? device.getPatchName (*patch) : juce::String ("?");
+        auto name = patch.has_value() ? nameOf (*patch) : juce::String ("?");
         g.setColour (hover ? theme::background : (patch.has_value() ? theme::text : theme::textOff));
         g.setFont (theme::label (13.0f));
         g.drawFittedText (name.isEmpty() ? juce::String ("untitled") : name, inner, juce::Justification::centredLeft, 1, 0.8f);
@@ -222,6 +222,22 @@ void SynthMemoryPanel::mouseDown (const juce::MouseEvent& e)
     loadSlotIntoEditor (slot);
 }
 
+juce::String SynthMemoryPanel::nameOf (const Patch& patch) const
+{
+    auto& device = controller.getDevice();
+
+    if (device.storesPatchNames())
+        return device.getPatchName (patch);
+
+    auto sound = device.asStored (patch);
+
+    for (auto& preset : library.getPresets())
+        if (preset.deviceId == device.getDeviceId() && device.asStored (preset.patch) == sound)
+            return preset.name;
+
+    return {};
+}
+
 void SynthMemoryPanel::loadSlotIntoEditor (int slot)
 {
     if (reader.isRunning())
@@ -241,7 +257,12 @@ void SynthMemoryPanel::loadSlotIntoEditor (int slot)
 
         cache[(size_t) slot] = result.front().patch;
         saveCache();
-        controller.loadPatch (result.front().patch, true);
+        auto patch = result.front().patch;
+
+        if (auto name = nameOf (patch); name.isNotEmpty() && ! controller.getDevice().storesPatchNames())
+            controller.getDevice().setPatchName (patch, name);
+
+        controller.loadPatch (patch, true);
         controller.setPresetRef ({});
         setStatus ("Loaded " + slotName + " into the editor");
     }, false);
@@ -250,7 +271,7 @@ void SynthMemoryPanel::loadSlotIntoEditor (int slot)
 void SynthMemoryPanel::writePresetToSlot (const Preset& preset, int slot)
 {
     auto slotName = controller.getDevice().getSlotName (slot);
-    auto existing = cache[(size_t) slot].has_value() ? controller.getDevice().getPatchName (*cache[(size_t) slot]) : juce::String();
+    auto existing = cache[(size_t) slot].has_value() ? nameOf (*cache[(size_t) slot]) : juce::String();
 
     auto options = juce::MessageBoxOptions()
                        .withIconType (juce::MessageBoxIconType::WarningIcon)

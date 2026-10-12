@@ -69,6 +69,11 @@ public:
     void requestSlot (int slot);
     std::function<void (const DeviceDefinition::IncomingPatch&)> onSlotReceived;   // message thread
 
+    /** Bracket a series of slot requests/writes. For synths with bank-relative slots the bank is
+        selected before the first access, and the panel's bank selected again at the end. */
+    void beginSlotAccess();
+    void endSlotAccess();
+
     void setFrozen (bool);
     bool isFrozen() const noexcept;
 
@@ -171,6 +176,10 @@ private:
     bool globalsRequested = false;      // the next global dump replaces the stored values
     double probeSentMs = 0;             // 0 = no probe outstanding
     bool probeUnanswered = false;       // the last probe timed out and nothing was heard since
+    int synthBank = -1;                 // bank selected on the synth as far as we know (-1 = unknown)
+    int panelBank = -1;                 // bank the user had selected (from the global dump)
+    bool accessingSlots = false;
+    void selectBankFor (int slot);
     bool registered = false;
     juce::String registeredKey;
     juce::String description { "SSO" };

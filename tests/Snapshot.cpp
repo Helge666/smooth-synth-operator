@@ -1,5 +1,6 @@
 #include "../apps/SSO-Kiwi3P/Source/PluginEditor.h"
 #include "../apps/SSO-KiwiSix/Source/PluginEditor.h"
+#include "../apps/SSO-Hawk800/Source/PluginEditor.h"
 
 namespace
 {
@@ -16,7 +17,7 @@ namespace
         auto& props = settings->get();
         std::map<juce::String, std::optional<juce::String>> saved;
 
-        for (auto key : { scaleKey, browserKey, deviceId + ".memoryOpen" })
+        for (auto key : { scaleKey, browserKey, deviceId + ".memoryOpen", deviceId + ".modPage" })
             saved[key] = props.containsKey (key) ? std::optional<juce::String> (props.getValue (key)) : std::nullopt;
 
         const juce::ScopeGuard restoreSettings { [&]
@@ -133,7 +134,7 @@ int runClickMemoryTest()
 }
 
 /** Renders a plugin editor offscreen to a PNG - for reviewing the GUI without a host.
-    Usage: SSO_Tests --snapshot out.png [--device kiwi3p|kiwisix] [--no-browser] [--inactive] [--scale 1.0] */
+    Usage: SSO_Tests --snapshot out.png [--device kiwi3p|kiwisix|hawk800] [--no-browser] [--inactive] [--scale 1.0] */
 int runSnapshot (const juce::StringArray& args)
 {
     auto deviceIndex = args.indexOf ("--device");
@@ -141,6 +142,9 @@ int runSnapshot (const juce::StringArray& args)
 
     if (device == "kiwisix")
         return snapshot<KiwiSixProcessor, KiwiSixEditor> (args, "kiwisix");
+
+    if (device == "hawk800")
+        return snapshot<Hawk800Processor, Hawk800Editor> (args, "hawk800");
 
     return snapshot<Kiwi3PProcessor, Kiwi3PEditor> (args, "kiwi3p");
 }

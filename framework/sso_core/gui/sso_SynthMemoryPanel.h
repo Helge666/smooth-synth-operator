@@ -49,6 +49,9 @@ private:
     juce::Rectangle<int> groupButtonBounds (int group) const;
     void verifyWrite (const Preset&, int slot, int attempt);
 
+    /** The sound's name - for synths that store no names, the name of the identical library preset. */
+    juce::String nameOf (const Patch&) const;
+
     void loadSlotIntoEditor (int slot);
     void writePresetToSlot (const Preset&, int slot);
     void readAll();

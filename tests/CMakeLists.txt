@@ -1,13 +1,16 @@
 juce_add_console_app(SSO_Tests PRODUCT_NAME "SSO Tests")
 
-target_sources(SSO_Tests PRIVATE TestMain.cpp Kiwi3PDeviceTests.cpp KiwiSixTests.cpp GlobalsTests.cpp LibraryTests.cpp GeneratorTests.cpp GuiTests.cpp OwnershipTests.cpp MidiLoopTests.cpp NoteForwarderTests.cpp Vst3HostTest.cpp Vst3TakeOverTest.cpp HardwareTest.cpp Snapshot.cpp
+target_sources(SSO_Tests PRIVATE TestMain.cpp Kiwi3PDeviceTests.cpp KiwiSixTests.cpp Hawk800Tests.cpp GlobalsTests.cpp LibraryTests.cpp GeneratorTests.cpp GuiTests.cpp OwnershipTests.cpp MidiLoopTests.cpp NoteForwarderTests.cpp Vst3HostTest.cpp Vst3TakeOverTest.cpp HardwareTest.cpp Snapshot.cpp
     # the app's processor and GUI, for offscreen snapshots
     ../apps/SSO-Kiwi3P/Source/PluginProcessor.cpp
     ../apps/SSO-Kiwi3P/Source/PluginEditor.cpp
     ../apps/SSO-Kiwi3P/Source/Kiwi3PPanel.cpp
     ../apps/SSO-KiwiSix/Source/PluginProcessor.cpp
     ../apps/SSO-KiwiSix/Source/PluginEditor.cpp
-    ../apps/SSO-KiwiSix/Source/KiwiSixPanel.cpp)
+    ../apps/SSO-KiwiSix/Source/KiwiSixPanel.cpp
+    ../apps/SSO-Hawk800/Source/PluginProcessor.cpp
+    ../apps/SSO-Hawk800/Source/PluginEditor.cpp
+    ../apps/SSO-Hawk800/Source/Hawk800Panel.cpp)
 
 target_compile_definitions(SSO_Tests PRIVATE
     JUCE_WEB_BROWSER=0
@@ -19,7 +22,8 @@ target_compile_definitions(SSO_Tests PRIVATE
     # Personal backup of the synth's memory (gitignored); tests using it are skipped if absent
     SSO_LOCAL_TONE_BACKUP="${CMAKE_SOURCE_DIR}/backups/2026-10-09_jx3p_full/tones_all_256.syx"
     SSO_LOCAL_KIWISIX_BACKUP="${CMAKE_SOURCE_DIR}/backups/2026-10-11_polysix_v5_after_update/tones_all_512.syx"
-    SSO_LOCAL_KIWISIX_FACTORY="${CMAKE_SOURCE_DIR}/backups/kiwisix_downloads/Kiwi6_factory3.syx")
+    SSO_LOCAL_KIWISIX_FACTORY="${CMAKE_SOURCE_DIR}/backups/kiwisix_downloads/Kiwi6_factory3.syx"
+    SSO_LOCAL_HAWK_FACTORY="${CMAKE_SOURCE_DIR}/backups/hawk800_downloads")
 
 target_link_libraries(SSO_Tests
     PRIVATE
@@ -27,6 +31,7 @@ target_link_libraries(SSO_Tests
         sso_kiwitechnics
         sso_kiwi3p
         sso_kiwisix
+        sso_hawk800
         juce::juce_audio_utils
     PUBLIC
         juce::juce_recommended_config_flags
