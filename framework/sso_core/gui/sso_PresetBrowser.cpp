@@ -184,8 +184,7 @@ void PresetBrowser::paintListBoxItem (int row, juce::Graphics& g, int width, int
     g.setFont (theme::label (12.0f));
     g.drawText (p->category, r.removeFromRight (56), juce::Justification::centredRight);
 
-    if (filter.bank.isEmpty())
-        g.drawText (p->bank, r.removeFromRight (80), juce::Justification::centredRight);
+    g.drawText (p->bank, r.removeFromRight (80), juce::Justification::centredRight);
 
     g.setColour (isCurrent ? theme::accent : theme::text);
     g.setFont (theme::label (15.0f, isCurrent));

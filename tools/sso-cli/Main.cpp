@@ -10,7 +10,7 @@
                               [--author <name>] [--root <library dir>]
     sso-cli list [--bank <name>] [--root <library dir>]
     sso-cli generate <category|all> --count <n> --out <file.syx> [--seed <n>]
-    sso-cli import-hawk-factory <folder with Bank1-4.syx> [--bank <name>] --device hawk800
+    sso-cli import-hawk-factory <folder with Bank1-4.syx> --device hawk800
 */
 
 namespace
@@ -114,7 +114,7 @@ int main (int argc, char* argv[])
     if (args[0] == "import-hawk-factory" && args.size() >= 2 && deviceName == "hawk800")
     {
         auto result = sso::hawk800::importFactoryBanks (library, static_cast<const sso::hawk800::Hawk800Device&> (device),
-                                                        juce::File (args[1]), option (args, "--bank", "HAWK Factory"));
+                                                        juce::File (args[1]));
         std::cout << "imported " << result.imported << " -> " << library.getRoot().getFullPathName() << std::endl;
         return result.imported > 0 ? 0 : 1;
     }

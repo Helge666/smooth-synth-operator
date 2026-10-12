@@ -205,6 +205,11 @@ public:
 
                 expectEquals (byName["Vibes A"]->category, juce::String ("Bells"));
                 expectEquals (byName["Helicopter"]->category, juce::String ("FX"));
+                expectEquals (byName["Helicopter"]->bank, juce::String ("Korg Factory"));
+                expectEquals (byName["Helicopter A"]->bank, juce::String ("HAWK Factory"));
+                expectEquals (byName["Init"]->bank, juce::String ("HAWK Factory"));
+                expectEquals ((int) std::count_if (library.getPresets().begin(), library.getPresets().end(),
+                                                   [] (auto& p) { return p.bank == "Korg Factory"; }), 64);
 
                 for (auto* expectedName : { "Init", "Strings", "Acoustic Piano", "UFO Swoop", "Helicopter A", "Vibes A", "Sound 3-11", "Sound 1-11" })
                     expect (byName.count (expectedName) == 1, juce::String ("missing ") + expectedName);

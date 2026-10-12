@@ -35,7 +35,8 @@ juce::String getKorgName (int slotInBank)
 }
 
 PresetLibrary::ImportResult importFactoryBanks (PresetLibrary& library, const Hawk800Device& device,
-                                                const juce::File& folder, const juce::String& bankName)
+                                                const juce::File& folder, const juce::String& hawkBank,
+                                                const juce::String& korgBank)
 {
     std::array<std::vector<DeviceDefinition::IncomingPatch>, Hawk800Device::numBanks> banks;
 
@@ -59,7 +60,7 @@ PresetLibrary::ImportResult importFactoryBanks (PresetLibrary& library, const Ha
     // Bank 2 first, so that the Korg sounds keep their plain names. A sound whose original
     // parameters equal a Korg sound is a HAWK variation of it: "<name> A", "B", ... Other
     // sounds are named after their place, "Sound <bank>-<number>". Exact copies are left out.
-    std::vector<DeviceDefinition::IncomingPatch> named;
+    std::vector<DeviceDefinition::IncomingPatch> korgSounds, hawkSounds;
     std::vector<Patch> seen;
     std::map<int, int> variations;
     std::map<juce::String, juce::String> categoryOf;     // name -> category, for the Korg sounds and their variations
@@ -92,17 +93,19 @@ PresetLibrary::ImportResult importFactoryBanks (PresetLibrary& library, const Ha
                 name = "Sound " + device.getSlotName (incoming.slot);
 
             device.setPatchName (incoming.patch, name);
-            named.push_back (std::move (incoming));
+            (b == 1 ? korgSounds : hawkSounds).push_back (std::move (incoming));
         }
     }
 
-    auto result = library.importPatches (named, bankName, "HAWK-800 factory banks", nullptr, "Korg / HAWK-800");
+    auto result = library.importPatches (korgSounds, korgBank, "HAWK-800 factory bank 2", nullptr, "Korg");
+    result.imported += library.importPatches (hawkSounds, hawkBank, "HAWK-800 factory banks", nullptr, "HAWK-800").imported;
 
     auto presets = library.getPresets();     // a copy: update() rescans the library
 
     for (auto preset : presets)
     {
-        if (auto it = categoryOf.find (preset.name); it != categoryOf.end() && preset.bank == bankName && preset.category != it->second)
+        if (auto it = categoryOf.find (preset.name); it != categoryOf.end() && (preset.bank == hawkBank || preset.bank == korgBank)
+             && preset.category != it->second)
         {
             preset.category = it->second;
             library.update (preset);
@@ -116,7 +119,7 @@ PresetLibrary::ImportResult importFactoryBanks (PresetLibrary& library, const Ha
         bool exists = false;
 
         for (auto& p : library.getPresets())
-            exists = exists || (p.bank == bankName && p.patch == init);
+            exists = exists || (p.bank == hawkBank && p.patch == init);
 
         if (! exists)
         {
@@ -128,7 +131,7 @@ PresetLibrary::ImportResult importFactoryBanks (PresetLibrary& library, const Ha
             p.sortIndex = 0;        // first, before "Sound 1-11"
             p.patch = init;
 
-            if (library.add (p, bankName).existsAsFile())
+            if (library.add (p, hawkBank).existsAsFile())
                 ++result.imported;
         }
     }
