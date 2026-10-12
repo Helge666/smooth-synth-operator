@@ -29,6 +29,7 @@ public:
     juce::String getLibraryFolderName() const override  { return "Hawk-800"; }
     juce::String getFirmwareInfo() const override       { return "HAWK-800 v2.68b"; }
     int getMcpPort() const override                     { return 47833; }
+    juce::String getSynthSummary() const override;     // see Hawk800Help.cpp
     int getPatchSize() const override                   { return synthPatchSize + nameLength; }
     int getMaxNameLength() const override               { return nameLength; }
     int getNumSlots() const override                    { return numBanks * slotsPerBank; }
@@ -78,6 +79,9 @@ public:
     };
 
     static juce::MidiMessage createSysEx (std::initializer_list<uint8_t> header, const uint8_t* nibbleData = nullptr, int numBytes = 0);
+
+private:
+    void addHelp();
 };
 
 } // namespace sso::hawk800

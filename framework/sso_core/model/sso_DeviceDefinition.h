@@ -157,6 +157,9 @@ public:
     static int buildFieldByte (const std::vector<ParamSpec>&, int offset, const std::function<int (int)>& valueOf);
 
 protected:
+    /** Sets ParamSpec::help by parameter id (for AI control); every id must exist. */
+    void setHelp (std::initializer_list<std::pair<const char*, const char*>>);
+
     /** The init patch with some parameters (by id) set - for sounds a device defines in code. */
     Patch createPatchWith (std::initializer_list<std::pair<const char*, int>> values) const;
 

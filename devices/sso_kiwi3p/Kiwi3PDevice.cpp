@@ -235,6 +235,8 @@ Kiwi3PDevice::Kiwi3PDevice() : KiwiTechnicsDevice (0x01)    // F0 00 21 16 60 [0
     g.back().defaultValue = 1;
     g.push_back (continuous ("g_pattern_level", "Level", "Pattern", 0x07, -1, 50));
     g.push_back (choice ("g_pattern_clock", "Clock", "Pattern", 0x09, 0, 5, patternClocks, -1, {}, 2));
+
+    addHelp();
 }
 
 //==============================================================================

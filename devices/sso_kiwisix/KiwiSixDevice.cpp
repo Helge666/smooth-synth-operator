@@ -130,6 +130,8 @@ KiwiSixDevice::KiwiSixDevice() : KiwiTechnicsDevice (0x02)    // F0 00 21 16 60 
     p.push_back (choice ("arp_range", "Range", "Arpeggiator", 0x3b, 0, 2, { "Off", "1 Oct", "2 Oct", "Full" }, 109, { -1, 16, 48, 96 }));
     p.push_back (choice ("arp_clock", "Clock", "Arpeggiator", 0x40, 0, 4, clockDivides, 110, ccSteps10 (clockDivides.size()), 6));
     p.push_back (choice ("seq_clock", "Seq Clock", "Arpeggiator", 0x41, 0, 4, clockDivides, 111, ccSteps10 (clockDivides.size()), 6));
+
+    addHelp();
 }
 
 //==============================================================================

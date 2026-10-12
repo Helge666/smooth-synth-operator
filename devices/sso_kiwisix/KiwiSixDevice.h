@@ -22,6 +22,7 @@ public:
     juce::String getLibraryFolderName() const override { return "KiwiSix"; }
     juce::String getFirmwareInfo() const override      { return "KiwiSix v5.00 Build 3"; }
     int getMcpPort() const override                     { return 47832; }
+    juce::String getSynthSummary() const override;     // see KiwiSixHelp.cpp
     int getNumSlots() const override              { return numSlots; }
     juce::String getSlotName (int slot) const override;
 
@@ -34,6 +35,9 @@ public:
 
     std::vector<juce::MidiMessage> createParamMessages (const MidiSettings&, int paramIndex,
                                                         const std::function<int (int)>& valueOf) const override;
+
+private:
+    void addHelp();
 };
 
 } // namespace sso::kiwisix

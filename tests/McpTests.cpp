@@ -326,7 +326,32 @@ public:
             expect (T::parseValue (choice, 0) == 0);
             expect (! T::parseValue (choice, "Sine").has_value());
             expect (! T::parseValue (choice, 2).has_value());
-            expectEquals (T::rangeText (choice), juce::String ("Square/Saw"));
+            expectEquals (T::rangeText (choice), juce::String ("Square, Saw"));
+        }
+
+        beginTest ("Every synth describes itself and every parameter");
+        {
+            sso::hawk800::Hawk800Device hawk;
+            sso::kiwi3p::Kiwi3PDevice kiwi3p;
+            sso::kiwisix::KiwiSixDevice kiwisix;
+
+            for (const sso::DeviceDefinition* d : { (const sso::DeviceDefinition*) &hawk, (const sso::DeviceDefinition*) &kiwi3p,
+                                                    (const sso::DeviceDefinition*) &kiwisix })
+            {
+                auto summary = d->getSynthSummary();
+                expect (summary.startsWith ("VOICES ") && summary.contains ("\nFLOW "), d->getDisplayName());
+
+                for (auto& line : juce::StringArray::fromLines (summary))
+                    expect (line.upToFirstOccurrenceOf (" ", false, false).containsOnly ("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+                            "summary lines start with a KEY: " + line);
+
+                for (auto& spec : d->getParams())
+                {
+                    expect (spec.help.isNotEmpty(), d->getDisplayName() + ": no help for " + spec.id);
+                    expect (spec.help.length() <= 140, d->getDisplayName() + ": help too long for " + spec.id);
+                    expect (! spec.help.contains ("|") && ! spec.help.containsChar ('\n'), spec.id);
+                }
+            }
         }
 
         sso::hawk800::Hawk800Device device;
@@ -363,7 +388,7 @@ public:
             auto info = call ("synth_info", "{}");
             expect (info.text.contains ("SYNTH Korg Poly-800"), info.text.substring (0, 200));
             expect (info.text.contains ("\ncutoff | VCF | 0..99 | "));
-            expect (info.text.contains ("\ndco1_wave | DCO 1 | Square/Saw | "));
+            expect (info.text.contains ("\ndco1_wave | DCO 1 | Square, Saw | "));
             expect (info.text.contains ("GENERATOR categories"));
 
             auto cutoff = device.indexOf ("cutoff"), wave = device.indexOf ("dco1_wave");

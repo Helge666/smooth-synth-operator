@@ -32,6 +32,18 @@ Patch DeviceDefinition::createInitPatch() const
     return p;
 }
 
+void DeviceDefinition::setHelp (std::initializer_list<std::pair<const char*, const char*>> texts)
+{
+    for (auto& [id, text] : texts)
+    {
+        auto index = indexOf (id);
+        jassert (index >= 0);   // unknown parameter id
+
+        if (index >= 0)
+            params[(size_t) index].help = text;
+    }
+}
+
 Patch DeviceDefinition::createPatchWith (std::initializer_list<std::pair<const char*, int>> values) const
 {
     auto p = createInitPatch();

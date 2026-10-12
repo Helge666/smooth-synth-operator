@@ -20,6 +20,7 @@ public:
     juce::String getLibraryFolderName() const override { return "Kiwi-3P"; }
     juce::String getFirmwareInfo() const override      { return "Kiwi-3P v4.00"; }    // power-on LED 4 = Prog v400
     int getMcpPort() const override                     { return 47831; }
+    juce::String getSynthSummary() const override;     // see Kiwi3PHelp.cpp
     int getNumSlots() const override              { return numSlots; }
     juce::String getSlotName (int slot) const override;
 
@@ -29,6 +30,9 @@ public:
     std::vector<juce::MidiMessage> createParamMessages (const MidiSettings&, int paramIndex,
                                                         const std::function<int (int)>& valueOf) const override;
     std::vector<int> getParamsToRefreshAfterDump() const override;
+
+private:
+    void addHelp();
 };
 
 } // namespace sso::kiwi3p

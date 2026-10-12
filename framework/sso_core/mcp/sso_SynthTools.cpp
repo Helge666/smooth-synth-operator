@@ -216,7 +216,7 @@ juce::String SynthTools::rangeText (const ParamSpec& spec)
 {
     switch (spec.kind)
     {
-        case ParamSpec::Kind::choice:  return spec.choices.joinIntoString ("/");
+        case ParamSpec::Kind::choice:  return spec.choices.joinIntoString (", ");
         case ParamSpec::Kind::toggle:  return "off/on";
         case ParamSpec::Kind::bipolar: return juce::String (spec.minValue) + ".." + juce::String (spec.maxValue)
                                               + ", " + juce::String (spec.centreValue) + " = centre";

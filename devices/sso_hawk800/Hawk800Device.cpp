@@ -231,6 +231,8 @@ Hawk800Device::Hawk800Device()
 
     // Not exposed: MK2 effects/EQ (P1 34-38, 46, 47) and AtomaHawk parameters (P2 48, 58, 61-68)
     // - their bytes are carried along unchanged.
+
+    addHelp();
 }
 
 //==============================================================================
