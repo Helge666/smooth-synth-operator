@@ -16,6 +16,7 @@ struct ParamSpec
     juce::String id;          // stable identifier (automation, presets) - never rename
     juce::String name;        // display name
     juce::String section;     // GUI grouping
+    juce::String help;        // what it does, in a few words (for AI control, see SynthTools)
     Kind kind = Kind::continuous;
 
     int minValue = 0;

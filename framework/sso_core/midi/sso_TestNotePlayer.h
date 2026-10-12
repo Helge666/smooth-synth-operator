@@ -16,12 +16,16 @@ public:
         double timeMs;
         int note;
         bool on;
+        int velocity = 100;
     };
 
     explicit TestNotePlayer (SynthController&);
     ~TestNotePlayer() override;
 
     void play (std::vector<Event> phrase = defaultPhrase());
+
+    /** Length of the phrase that is playing (or played last), in ms after the start delay. */
+    double getPhraseLengthMs() const;
     void stop();
     bool isPlaying() const noexcept { return playing.load(); }
 

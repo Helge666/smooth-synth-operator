@@ -21,6 +21,10 @@ public:
     /** The synth firmware the app was built and tested with, e.g. "HAWK-800 v2.68b" - shown
         with the app's version, so users know what it was made for. */
     virtual juce::String getFirmwareInfo() const            { return {}; }
+
+    /** The synth in a few formal lines for AI control (voices, signal flow, quirks) - see
+        SynthTools' synth_info. Each line "KEY text", e.g. "FLOW DCO -> VCF -> VCA". */
+    virtual juce::String getSynthSummary() const            { return {}; }
     virtual int getPatchSize() const = 0;
     virtual int getMaxNameLength() const = 0;
     virtual int getNumSlots() const = 0;                 // stored sound memories

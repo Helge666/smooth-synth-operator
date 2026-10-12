@@ -35,6 +35,9 @@ public:
     /** Current value of a parameter (any thread). */
     int getValue (int paramIndex) const noexcept   { return sender.getValue (paramIndex); }
 
+    /** Changes a parameter like the user turning its knob: GUI, host and synth follow. */
+    void setValue (int paramIndex, int value);
+
     /** The parameter the user (GUI or host) changed last, and a counter that increments
         with every such change - for "last touched" displays. -1 = none yet. */
     int getLastUserChange() const noexcept          { return lastUserParam.load(); }

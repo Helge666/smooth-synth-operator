@@ -5,6 +5,7 @@ int runSnapshot (const juce::StringArray& args);
 int runClickMemoryTest();
 int runPlayTest (const juce::String& portName);
 int runTuneTest (const juce::StringArray& args);
+int runMcpCall (const juce::StringArray& args);
 int runHoldSynth (const juce::String& port);
 int runVst3StateTest (const juce::StringArray& args);
 int runVst3TakeOverTest (const juce::StringArray& args);
@@ -33,6 +34,9 @@ int main (int argc, char* argv[])
 
     if (args.contains ("--play-test"))
         return runPlayTest (args[args.indexOf ("--play-test") + 1]);
+
+    if (args.contains ("--mcp-call"))
+        return runMcpCall (args);
 
     if (args.contains ("--tune-test"))
         return runTuneTest (args);

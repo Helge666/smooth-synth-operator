@@ -11,6 +11,8 @@
 #include "library/sso_PresetLibrary.cpp"
 #include "state/sso_BankReader.cpp"
 #include "generator/sso_PatchGenerator.cpp"
+#include "mcp/sso_McpServer.cpp"
+#include "mcp/sso_SynthTools.cpp"
 #include "gui/sso_LookAndFeel.cpp"
 #include "gui/sso_Widgets.cpp"
 #include "gui/sso_ModMatrix.cpp"

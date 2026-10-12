@@ -364,6 +364,20 @@ void SynthController::parameterChanged (const juce::String& parameterID, float n
     }
 }
 
+void SynthController::setValue (int index, int value)
+{
+    if (! juce::isPositiveAndBelow (index, (int) parameters.size()))
+        return;
+
+    auto& spec = device.getParams()[(size_t) index];
+    value = juce::jlimit (spec.minValue, spec.maxValue, value);
+    auto plain = spec.kind == ParamSpec::Kind::choice ? value - spec.minValue : value;
+    auto* p = parameters[(size_t) index];
+    p->beginChangeGesture();
+    p->setValueNotifyingHost (p->convertTo0to1 ((float) plain));
+    p->endChangeGesture();
+}
+
 Patch SynthController::getCurrentPatch() const
 {
     // Only rewrite fields whose value changed: fields holding values the parameter

@@ -57,6 +57,12 @@ void TestNotePlayer::play (std::vector<Event> phrase)
     startTimer (2);
 }
 
+double TestNotePlayer::getPhraseLengthMs() const
+{
+    const juce::ScopedLock sl (lock);
+    return events.empty() ? 0.0 : events.back().timeMs;
+}
+
 void TestNotePlayer::stop()
 {
     stopTimer();
@@ -95,7 +101,7 @@ void TestNotePlayer::hiResTimerCallback()
 
             if (e.on)
             {
-                controller.sendMidi (juce::MidiMessage::noteOn (channel, e.note, (juce::uint8) 100));
+                controller.sendMidi (juce::MidiMessage::noteOn (channel, e.note, (juce::uint8) juce::jlimit (1, 127, e.velocity)));
                 sounding.insert (e.note);
             }
             else

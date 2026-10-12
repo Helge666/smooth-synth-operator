@@ -43,6 +43,8 @@
 #include "library/sso_PresetLibrary.h"
 #include "state/sso_BankReader.h"
 #include "generator/sso_PatchGenerator.h"
+#include "mcp/sso_McpServer.h"
+#include "mcp/sso_SynthTools.h"
 #include "gui/sso_Theme.h"
 #include "gui/sso_LookAndFeel.h"
 #include "gui/sso_Widgets.h"
