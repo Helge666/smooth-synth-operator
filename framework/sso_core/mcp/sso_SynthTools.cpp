@@ -383,8 +383,8 @@ ToolResult SynthTools::setSoundName (const juce::var& args)
 
     context.controller.setPatchName (name);
     auto stored = context.controller.getPatchName();
-    return { "Name " + quoted (stored) + (stored != name ? " (shortened to the synth's " + juce::String (device.getMaxNameLength())
-                                                           + " characters)" : juce::String()) };
+    return { "Name " + quoted (stored) + (stored != name ? " (the synth stores up to " + juce::String (device.getMaxNameLength())
+                                                           + " plain ASCII characters)" : juce::String()) };
 }
 
 ToolResult SynthTools::initSound (const juce::var&)

@@ -46,6 +46,7 @@
 #include "mcp/sso_McpServer.h"
 #include "mcp/sso_SynthTools.h"
 #include "mcp/sso_McpHttpServer.h"
+#include "mcp/sso_McpBridge.h"
 #include "mcp/sso_AiControl.h"
 #include "gui/sso_Theme.h"
 #include "gui/sso_LookAndFeel.h"

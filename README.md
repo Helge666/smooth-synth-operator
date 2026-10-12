@@ -30,6 +30,8 @@ programmer shares all of the following:
 - Plugin: sound is saved with the project and sent when it opens; one instance per synth
   (others grey out, TAKE OVER by click); the track's notes are played on the synth
 - MIDI loop protection
+- AI control (MCP, optional): AI assistants such as Claude can read and set every parameter, play
+  notes and use library and generator - see [docs/ai-control.md](docs/ai-control.md)
 
 ## Versions
 
@@ -67,7 +69,7 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 ```
 
-To install the VST3 plugins, run `install-vst3.ps1` from an administrator PowerShell
+To install the VST3 plugins (and the AI control bridge `sso-mcp.exe`), run `install-vst3.ps1` from an administrator PowerShell
 (`powershell -ExecutionPolicy Bypass -File .\install-vst3.ps1`).
 
 ## License

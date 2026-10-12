@@ -14,6 +14,7 @@
 #include "mcp/sso_McpServer.cpp"
 #include "mcp/sso_SynthTools.cpp"
 #include "mcp/sso_McpHttpServer.cpp"
+#include "mcp/sso_McpBridge.cpp"
 #include "mcp/sso_AiControl.cpp"
 #include "gui/sso_LookAndFeel.cpp"
 #include "gui/sso_Widgets.cpp"
