@@ -7,7 +7,8 @@ standalone app and VST3 plugin for Windows.
 
 Open the link, then click the `.zip` file under **Assets**. The installation is described in
 `INSTALL.txt` inside the zip: copy the plugin into your VST3 folder, or start the app directly.
-Nothing else to install.
+Nothing else to install. Windows only for now - macOS and Linux versions are planned (see
+[Roadmap](#roadmap)).
 
 ![SSO KiwiSix](docs/images/kiwisix.png)
 
@@ -44,6 +45,11 @@ SSO Kiwi-3P is inspired by the Retroaktiv PG-2K.
 | SSO Kiwi-3P | SSO Hawk-800 |
 |---|---|
 | ![SSO Kiwi-3P](docs/images/kiwi3p.png) | ![SSO Hawk-800](docs/images/hawk800.png) |
+
+## Roadmap
+
+- **macOS version** (VST3, AU and standalone app)
+- **Linux version** (VST3 and standalone app)
 
 ## Versions
 
