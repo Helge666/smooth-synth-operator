@@ -3,6 +3,12 @@
 Modern software programmers for vintage synthesizers with modern upgrades —
 standalone app and VST3 plugin for Windows.
 
+## ⬇ [Download for Windows (VST3 + standalone)](https://github.com/Helge666/smooth-synth-operator/releases/latest)
+
+Open the link, then click the `.zip` file under **Assets**. The installation is described in
+`INSTALL.txt` inside the zip: copy the plugin into your VST3 folder, or start the app directly.
+Nothing else to install.
+
 ![SSO KiwiSix](docs/images/kiwisix.png)
 
 | App | Synth | Upgrade | Made and tested with |
@@ -54,7 +60,7 @@ Problems such as a detected MIDI loop are written to `%TEMP%\SSO-ownership\owner
 For step-by-step details (which instance owns the synth and why), create an empty file
 `%TEMP%\SSO-ownership\verbose` and restart the app or host.
 
-## Building (Windows)
+## Building from source (developers)
 
 Requires Visual Studio 2022 (C++ workload) and CMake ≥ 3.22.
 
@@ -67,7 +73,8 @@ cmake --build build --config Release
 
 The standalone apps end up in `build\apps\<app>\<target>_artefacts\Release\Standalone`. To
 install the VST3 plugins, run `install-vst3.ps1` from an administrator PowerShell
-(`powershell -ExecutionPolicy Bypass -File .\install-vst3.ps1`).
+(`powershell -ExecutionPolicy Bypass -File .\install-vst3.ps1`). `make-release.ps1 -Version vX.Y`
+packs the Release builds into the zip for a GitHub release.
 
 ## Layout
 

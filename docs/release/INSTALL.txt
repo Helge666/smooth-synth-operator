@@ -1,0 +1,45 @@
+SMOOTH SYNTH OPERATOR - Windows 10/11, 64 bit
+https://github.com/Helge666/smooth-synth-operator
+
+Programmers for vintage synths with modern upgrades:
+
+  SSO Kiwi-3P    Roland JX-3P with the KiwiTechnics Kiwi-3P upgrade
+  SSO KiwiSix    Korg PolySix with the KiwiTechnics KiwiSix upgrade
+  SSO Hawk-800   Korg Poly-800 (MK1) with the HAWK-800 upgrade
+
+Each comes as a VST3 plugin (for your DAW) and as a standalone app. Install only
+the ones for the synths you own.
+
+
+PLUGIN (VST3)
+
+1. Copy the folder "SSO <name>.vst3" from the VST3 folder of this download to
+       C:\Program Files\Common Files\VST3
+   Windows asks for administrator permission - confirm it.
+2. Let your DAW rescan its plugins (Cubase: Studio > VST Plug-in Manager).
+3. Load the plugin as an instrument on a MIDI track. Click MIDI in the plugin and
+   choose the MIDI ports your synth is connected to.
+
+
+STANDALONE APP
+
+Copy "SSO <name>.exe" from the Standalone folder anywhere you like (e.g. your
+desktop) and double-click it. Click MIDI to choose the synth's MIDI ports.
+
+On the first start Windows may say "Windows protected your PC", because the app
+is not signed. Click "More info", then "Run anyway".
+
+
+IN USE
+
+- Close the plugin in your DAW before using the standalone app for the same synth
+  (or click TAKE OVER) - only one of them can talk to the synth at a time.
+- Your sound library is stored in Documents\Smooth Synth Operator.
+- Avoid MIDI loops: the synth's MIDI OUT must not be routed back to its MIDI IN.
+
+Questions and problems: https://github.com/Helge666/smooth-synth-operator/issues
+
+
+LICENSE
+
+AGPLv3 - see LICENSE.txt. The source code of this version is on GitHub (link above).
